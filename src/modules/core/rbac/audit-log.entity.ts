@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  ManyToOne,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { User } from '../users/user.entity';
 import { Organization } from '../organizations/organization.entity';

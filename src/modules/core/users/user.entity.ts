@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Membership } from '../rbac/membership.entity';
 import { Organization } from '../organizations/organization.entity';

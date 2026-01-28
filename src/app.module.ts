@@ -9,6 +9,7 @@ import { AuthModule } from './modules/core/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PersonalFinanceModule } from './modules/personal-finance/personal-finance.module';
 import { BusinessModule } from './modules/business/business.module';
+import { SeedModule } from './modules/core/seed/seed.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { BusinessModule } from './modules/business/business.module';
     BillingModule,
     PersonalFinanceModule,
     BusinessModule,
+    SeedModule,
   ],
 })
 export class AppModule {}
