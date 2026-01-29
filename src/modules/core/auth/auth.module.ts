@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { jwtConfig } from '../../../config/jwt.config';
+import { MailerModule } from '../mailer/mailer.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { jwtConfig } from '../../../config/jwt.config';
     JwtModule.register({
       secret: jwtConfig.accessSecret,
     }),
+    MailerModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

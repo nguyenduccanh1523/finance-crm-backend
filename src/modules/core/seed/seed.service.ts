@@ -38,6 +38,11 @@ export class SeedService implements OnApplicationBootstrap {
         description: 'Hỗ trợ hệ thống',
       },
       {
+        scope: RoleScope.GLOBAL,
+        name: 'TESTER',
+        description: 'Tester – dùng để test chức năng',
+      },
+      {
         scope: RoleScope.ORG,
         name: 'ORG_ADMIN',
         description: 'Quản trị doanh nghiệp',

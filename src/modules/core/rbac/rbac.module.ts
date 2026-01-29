@@ -5,6 +5,8 @@ import { Permission } from './permission.entity';
 import { RolePermission } from './role-permission.entity';
 import { Membership } from './membership.entity';
 import { AuditLog } from './audit-log.entity';
+import { RbacService } from './rbac.service';
+import { RbacAdminController } from './rbac-admin.controller';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { AuditLog } from './audit-log.entity';
       AuditLog,
     ]),
   ],
-  exports: [TypeOrmModule],
+  controllers: [RbacAdminController],
+  providers: [RbacService],
+  exports: [RbacService],
 })
 export class RbacModule {}

@@ -19,6 +19,21 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Post('request-otp')
+  async requestOtp(@Body('email') email: string) {
+    return this.authService.requestOtp(email);
+  }
+
+  @Post('resend-otp')
+  async resendOtp(@Body('email') email: string) {
+    return this.authService.resendOtp(email);
+  }
+
+  @Post('verify-otp')
+  async verifyOtp(@Body() dto: { email: string; otp: string }) {
+    return this.authService.verifyOtp(dto.email, dto.otp);
+  }
+
   @Post('register')
   async register(@Body() body: RegisterDto) {
     const user = await this.authService.register(body);
