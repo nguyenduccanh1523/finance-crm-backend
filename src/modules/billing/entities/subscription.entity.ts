@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  ManyToOne,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { SubscriptionScope } from '../../../common/enums/subscription-scope.enum';
 import { SubscriptionStatus } from '../../../common/enums/subscription-status.enum';

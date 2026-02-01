@@ -4886,6 +4886,7 @@ __metadata:
     reflect-metadata: "npm:^0.2.2"
     rxjs: "npm:^7.8.1"
     source-map-support: "npm:^0.5.21"
+    stripe: "npm:^20.3.0"
     supertest: "npm:^7.0.0"
     ts-jest: "npm:^29.2.5"
     ts-loader: "npm:^9.5.2"
@@ -9258,6 +9259,18 @@ __metadata:
   version: 2.0.1
   resolution: "strip-json-comments@npm:2.0.1"
   checksum: 10c0/b509231cbdee45064ff4f9fd73609e2bcc4e84a4d508e9dd0f31f70356473fde18abfb5838c17d56fb236f5a06b102ef115438de0600b749e818a35fbbc48c43
+  languageName: node
+  linkType: hard
+
+"stripe@npm:^20.3.0":
+  version: 20.3.0
+  resolution: "stripe@npm:20.3.0"
+  peerDependencies:
+    "@types/node": ">=16"
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+  checksum: 10c0/f895b9674ed5e192868b569873392aa8e6a3f03cf7e3a4de2a126da6b28e9dd4432ca7d8fe9782dc2b9cccbcfc8ccefc998565a1ccf8ed263873aa018d864657
   languageName: node
   linkType: hard
 

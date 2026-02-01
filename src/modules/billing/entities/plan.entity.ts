@@ -11,11 +11,20 @@ export class Plan extends BaseEntity {
   @Column({ type: 'text' })
   name: string;
 
+  // chỉ dùng làm default hiển thị (hoặc bạn đổi thành defaultInterval sau)
   @Column({ type: 'text' })
   interval: BillingInterval; // MONTH | YEAR
 
-  @Column({ name: 'price_cents', type: 'integer' })
+  // (giữ lại để tương thích cũ) - có thể bỏ sau
+  @Column({ name: 'price_cents', type: 'integer', default: 0 })
   priceCents: number;
+
+  // ===== New: monthly / yearly price =====
+  @Column({ name: 'monthly_price_cents', type: 'integer', default: 0 })
+  monthlyPriceCents: number;
+
+  @Column({ name: 'yearly_price_cents', type: 'integer', default: 0 })
+  yearlyPriceCents: number;
 
   @Column({ type: 'char', length: 3 })
   currency: string;
@@ -25,4 +34,14 @@ export class Plan extends BaseEntity {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
+
+  // ===== Stripe mapping =====
+  @Column({ name: 'stripe_product_id', type: 'text', nullable: true })
+  stripeProductId?: string;
+
+  @Column({ name: 'stripe_monthly_price_id', type: 'text', nullable: true })
+  stripeMonthlyPriceId?: string;
+
+  @Column({ name: 'stripe_yearly_price_id', type: 'text', nullable: true })
+  stripeYearlyPriceId?: string;
 }
