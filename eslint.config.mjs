@@ -41,6 +41,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       'no-useless-catch': 'off',
       '@typescript-eslint/no-unsafe-enum-comparison': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 );

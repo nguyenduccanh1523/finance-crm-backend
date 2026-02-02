@@ -1,12 +1,17 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  HttpStatus,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { REQUIRE_FEATURES_KEY } from './require-features.decorator';
 import { SubscriptionService } from '../subscription.service';
 import { SubscriptionScope } from '../../../common/enums/subscription-scope.enum';
 import { billingErrors } from '../billing.errors';
 import { AppException } from '../../../common/exceptions/app.exception';
-import { HttpStatus } from '@nestjs/common';
 import { AppErrorCode } from '../../../common/errors/app-error-codes';
+import { FREE_FEATURES } from '../features/free-features';
 
 @Injectable()
 export class FeatureGuard implements CanActivate {
@@ -38,15 +43,30 @@ export class FeatureGuard implements CanActivate {
       orgId,
     );
 
+    // ✅ New rule:
+    // - ORG scope: no sub -> subscriptionRequired (same as before)
+    // - PERSONAL scope: no sub -> use FREE_FEATURES (do not block everything)
     if (!sub) {
-      throw billingErrors.subscriptionRequired();
+      if (scope === SubscriptionScope.ORG) {
+        throw billingErrors.subscriptionRequired();
+      }
+
+      const flags = FREE_FEATURES.flags ?? {};
+      for (const f of required) {
+        if (!flags[f]) {
+          throw new AppException(
+            AppErrorCode.BILLING_FEATURE_NOT_ALLOWED,
+            HttpStatus.PAYMENT_REQUIRED,
+            `Free không hỗ trợ tính năng: ${f}`,
+          );
+        }
+      }
+      return true;
     }
 
     const flags = sub.plan?.features?.flags ?? {};
     for (const f of required) {
       if (!flags[f]) {
-        // billingErrors.featureNotAllowed() không nhận args,
-        // nên bạn override message bằng AppException:
         throw new AppException(
           AppErrorCode.BILLING_FEATURE_NOT_ALLOWED,
           HttpStatus.PAYMENT_REQUIRED,

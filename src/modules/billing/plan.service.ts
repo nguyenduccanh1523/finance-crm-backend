@@ -31,11 +31,23 @@ export class PlanService {
             'ai.insights': false,
             'work.projects': true,
             'work.tasks': true,
+
+            // ✅ Personal finance flags
+            'finance.report': true,
+            'finance.ai_advice': false,
           },
           quotas: {
             'ai_credits.monthly': 50,
             'members.max': 3,
             'projects.max': 5,
+
+            // ✅ Personal quotas
+            'personal.accounts.max': 5,
+            'personal.categories.max': 200,
+            'personal.tags.max': 50,
+            'personal.transactions.monthly': 5000,
+            'personal.recurring_rules.max': 20,
+            'personal.attachments.max': 50,
           },
         },
       },
@@ -56,11 +68,23 @@ export class PlanService {
             'ai.insights': true,
             'work.projects': true,
             'work.tasks': true,
+
+            // ✅ Personal finance flags
+            'finance.report': true,
+            'finance.ai_advice': false,
           },
           quotas: {
             'ai_credits.monthly': 500,
             'members.max': 10,
             'projects.max': 50,
+
+            // ✅ Personal quotas
+            'personal.accounts.max': 20,
+            'personal.categories.max': 500,
+            'personal.tags.max': 200,
+            'personal.transactions.monthly': 50000,
+            'personal.recurring_rules.max': 200,
+            'personal.attachments.max': 500,
           },
         },
       },
@@ -81,11 +105,23 @@ export class PlanService {
             'ai.insights': true,
             'work.projects': true,
             'work.tasks': true,
+
+            // ✅ Personal finance flags
+            'finance.report': true,
+            'finance.ai_advice': true,
           },
           quotas: {
             'ai_credits.monthly': 5000,
             'members.max': 999999,
             'projects.max': 999999,
+
+            // ✅ Personal quotas (unlimited-like)
+            'personal.accounts.max': 999999,
+            'personal.categories.max': 999999,
+            'personal.tags.max': 999999,
+            'personal.transactions.monthly': 999999999,
+            'personal.recurring_rules.max': 999999,
+            'personal.attachments.max': 999999,
           },
         },
       },
@@ -147,9 +183,57 @@ export class PlanService {
       setFlag(p, false);
     }
 
-    // save all (transaction nếu bạn muốn chắc chắn)
+    // save all
     await this.planRepo.save([...byCode.values()]);
 
+    return { ok: true };
+  }
+
+  /**
+   * Patch 1 quota key.
+   * - propagate=false: patch only target plan
+   * - propagate=true: patch target plan and higher tiers (starter->pro->enterprise)
+   */
+  async patchQuotaWithTier(
+    code: string,
+    key: string,
+    value: number,
+    propagate = false,
+  ) {
+    const targetCode = code as PlanCode;
+    if (!PLAN_ORDER.includes(targetCode)) return null;
+
+    const plans = await this.planRepo.find({
+      where: PLAN_ORDER.map((c) => ({ code: c })),
+    });
+
+    const byCode = new Map<string, Plan>();
+    for (const p of plans) byCode.set(p.code, p);
+
+    for (const c of PLAN_ORDER) {
+      if (!byCode.get(c)) return null;
+    }
+
+    const setQuota = (plan: Plan, v: number) => {
+      const features = plan.features || {};
+      const quotas = (features.quotas || {}) as Record<string, any>;
+      quotas[key] = v;
+      plan.features = { ...features, quotas };
+    };
+
+    if (!propagate) {
+      const p = byCode.get(targetCode)!;
+      setQuota(p, value);
+      await this.planRepo.save(p);
+      return { ok: true };
+    }
+
+    const idx = PLAN_ORDER.indexOf(targetCode);
+    for (let i = idx; i < PLAN_ORDER.length; i++) {
+      const p = byCode.get(PLAN_ORDER[i])!;
+      setQuota(p, value);
+    }
+    await this.planRepo.save([...byCode.values()]);
     return { ok: true };
   }
 

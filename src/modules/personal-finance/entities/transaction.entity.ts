@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  ManyToOne,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { SoftDeleteEntity } from '../../../common/entities/soft-delete.entity';
 import { PersonalWorkspace } from './personal-workspace.entity';
 import { Account } from './account.entity';

@@ -8,10 +8,13 @@ export enum AppErrorCode {
   TOKEN_REVOKED = 'TOKEN_REVOKED',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
 
+  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
+
   BILLING_PLAN_NOT_FOUND = 'BILLING_PLAN_NOT_FOUND',
   BILLING_STRIPE_PRICE_NOT_CONFIGURED = 'BILLING_STRIPE_PRICE_NOT_CONFIGURED',
   BILLING_SUBSCRIPTION_REQUIRED = 'BILLING_SUBSCRIPTION_REQUIRED',
   BILLING_FEATURE_NOT_ALLOWED = 'BILLING_FEATURE_NOT_ALLOWED',
+  BILLING_QUOTA_EXCEEDED = 'BILLING_QUOTA_EXCEEDED',
   BILLING_INVALID_WEBHOOK_SIGNATURE = 'BILLING_INVALID_WEBHOOK_SIGNATURE',
 }
 
@@ -27,6 +30,8 @@ export const APP_ERROR_MESSAGES: Record<AppErrorCode, string> = {
   [AppErrorCode.INTERNAL_ERROR]:
     'Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.',
 
+  [AppErrorCode.RESOURCE_NOT_FOUND]: 'Không tìm thấy tài nguyên.',
+
   [AppErrorCode.BILLING_PLAN_NOT_FOUND]: 'Không tìm thấy gói dịch vụ.',
   [AppErrorCode.BILLING_STRIPE_PRICE_NOT_CONFIGURED]:
     'Gói chưa cấu hình Stripe price.',
@@ -34,6 +39,8 @@ export const APP_ERROR_MESSAGES: Record<AppErrorCode, string> = {
     'Bạn cần gói trả phí hợp lệ để dùng tính năng này.',
   [AppErrorCode.BILLING_FEATURE_NOT_ALLOWED]:
     'Gói hiện tại không hỗ trợ tính năng này.',
+  [AppErrorCode.BILLING_QUOTA_EXCEEDED]:
+    'Bạn đã vượt giới hạn quota của gói hiện tại.',
   [AppErrorCode.BILLING_INVALID_WEBHOOK_SIGNATURE]:
     'Webhook Stripe không hợp lệ.',
 };

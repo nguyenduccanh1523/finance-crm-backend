@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../core/auth/guards/jwt-auth.guard';
 import { Roles } from '../core/auth/decorators/roles.decorator';
 import { RolesGuard } from '../core/auth/guards/roles.guard';
 import { PatchPlanFlagDto } from './dto/patch-plan-flag.dto';
+import { PatchPlanQuotaDto } from './dto/patch-plan-quota.dto';
 
 @Controller('billing/admin/plans')
 export class PlanAdminController {
@@ -31,6 +32,18 @@ export class PlanAdminController {
     return this.planService.patchFlagWithTier(code, dto.flag, dto.enabled);
   }
 
-  // (tuỳ chọn) vẫn giữ endpoint replace full features
-  // @Patch(':code/features') ...
+  // ✅ PATCH 1 quota
+  // - default: chỉ patch đúng plan code
+  // - propagate=true: patch code và các tier cao hơn
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  @Patch(':code/quotas')
+  patchQuota(@Param('code') code: string, @Body() dto: PatchPlanQuotaDto) {
+    return this.planService.patchQuotaWithTier(
+      code,
+      dto.key,
+      dto.value,
+      dto.propagate ?? false,
+    );
+  }
 }
