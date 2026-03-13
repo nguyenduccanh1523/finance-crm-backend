@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Category } from '../entities/category.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
@@ -8,8 +8,12 @@ import { PersonalQuotaKeys } from '../common/personal.constants';
 import { personalErrors } from '../common/personal.errors';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { AdminCreateCategoryDto } from './dto/admin-create-category.dto';
+import { AdminCreateCategoryDto } from './dto/admin-create-category-unified.dto';
 import { CategoryKind } from '../../../common/enums/category-kind.enum';
+import {
+  ListCategoriesResponseDto,
+  CategoryResponseDto,
+} from './dto/list-categories-response.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -19,16 +23,65 @@ export class CategoriesService {
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
-  async list(user: any) {
+  async list(user: any): Promise<ListCategoriesResponseDto> {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.repo.find({
+
+    // Get global categories (workspaceId is null)
+    const globalCategories = await this.repo.find({
+      where: { workspaceId: IsNull() as any, deletedAt: IsNull() as any },
+      order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
+    });
+
+    // Get workspace categories
+    const workspaceCategories = await this.repo.find({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
     });
+
+    // Format response
+    const formatCategory = (
+      cat: Category,
+      scope: 'global' | 'workspace',
+    ): CategoryResponseDto => ({
+      id: cat.id,
+      workspaceId: cat.workspaceId,
+      name: cat.name,
+      kind: cat.kind,
+      icon: cat.icon,
+      parentId: cat.parentId,
+      sortOrder: cat.sortOrder,
+      scope,
+      createdAt: cat.createdAt,
+      updatedAt: cat.updatedAt,
+    });
+
+    return {
+      global: globalCategories.map((cat) => formatCategory(cat, 'global')),
+      workspace: workspaceCategories.map((cat) =>
+        formatCategory(cat, 'workspace'),
+      ),
+    };
   }
 
   async create(user: any, dto: CreateCategoryDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
+
+    // Check for duplicate name + icon combination
+    if (dto.name && dto.icon) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: ws.id,
+          name: dto.name,
+          icon: dto.icon,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Category with same name and icon already exists',
+        );
+      }
+    }
 
     const used = await this.repo.count({
       where: { workspaceId: ws.id, deletedAt: IsNull() as any },
@@ -53,6 +106,26 @@ export class CategoriesService {
     });
     if (!cat) throw personalErrors.resourceNotFound('category');
 
+    // Check for duplicate name + icon combination (excluding current category)
+    const newName = dto.name !== undefined ? dto.name : cat.name;
+    const newIcon = dto.icon !== undefined ? dto.icon : cat.icon;
+    if (newName && newIcon) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId,
+          name: newName,
+          icon: newIcon,
+          id: Not(id),
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Category with same name and icon already exists',
+        );
+      }
+    }
+
     if (dto.name !== undefined) cat.name = dto.name;
     if (dto.kind !== undefined) cat.kind = dto.kind;
     if (dto.parentId !== undefined) cat.parentId = dto.parentId;
@@ -72,13 +145,127 @@ export class CategoriesService {
     return { ok: true };
   }
 
-  // ADMIN
-  async adminCreate(userId: string, dto: AdminCreateCategoryDto) {
+  // ADMIN - Unified endpoint
+  async adminCreate(dto: AdminCreateCategoryDto) {
+    const defaultKind = CategoryKind.EXPENSE as any;
+
+    // Route by scope
+    if (dto.scope === 'global') {
+      return this.createGlobalCategory(dto, defaultKind);
+    }
+
+    if (dto.scope === 'workspace') {
+      if (!dto.workspaceId) {
+        throw personalErrors.invalidInput(
+          'workspaceId required for workspace scope',
+        );
+      }
+      return this.createWorkspaceCategory(dto.workspaceId, dto, defaultKind);
+    }
+
+    if (dto.scope === 'user') {
+      if (!dto.userId) {
+        throw personalErrors.invalidInput('userId required for user scope');
+      }
+      return this.createUserCategory(dto.userId, dto, defaultKind);
+    }
+
+    throw personalErrors.invalidInput('Invalid scope');
+  }
+
+  private async createGlobalCategory(
+    dto: AdminCreateCategoryDto,
+    defaultKind: any,
+  ) {
+    // Check for duplicate name + icon combination in global scope
+    if (dto.name && dto.icon) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: IsNull() as any,
+          name: dto.name,
+          icon: dto.icon,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Global category with same name and icon already exists',
+        );
+      }
+    }
+
+    const entity = this.repo.create({
+      workspaceId: null,
+      name: dto.name,
+      kind: dto.kind ?? defaultKind,
+      parentId: dto.parentId,
+      icon: dto.icon,
+      sortOrder: dto.sortOrder ?? 0,
+    });
+    return this.repo.save(entity);
+  }
+
+  private async createWorkspaceCategory(
+    workspaceId: string,
+    dto: AdminCreateCategoryDto,
+    defaultKind: any,
+  ) {
+    // Check for duplicate name + icon combination in workspace scope
+    if (dto.name && dto.icon) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId,
+          name: dto.name,
+          icon: dto.icon,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Workspace category with same name and icon already exists',
+        );
+      }
+    }
+
+    const entity = this.repo.create({
+      workspaceId,
+      name: dto.name,
+      kind: dto.kind ?? defaultKind,
+      parentId: dto.parentId,
+      icon: dto.icon,
+      sortOrder: dto.sortOrder ?? 0,
+    });
+    return this.repo.save(entity);
+  }
+
+  private async createUserCategory(
+    userId: string,
+    dto: AdminCreateCategoryDto,
+    defaultKind: any,
+  ) {
     const ws = await this.wsService.getOrCreateByUserId(userId);
+
+    // Check for duplicate name + icon combination in user workspace
+    if (dto.name && dto.icon) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: ws.id,
+          name: dto.name,
+          icon: dto.icon,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Category with same name and icon already exists in user workspace',
+        );
+      }
+    }
+
     const entity = this.repo.create({
       workspaceId: ws.id,
       name: dto.name ?? 'Uncategorized',
-      kind: (dto.kind ?? (CategoryKind.EXPENSE as any)) as any,
+      kind: dto.kind ?? defaultKind,
       parentId: dto.parentId,
       icon: dto.icon,
       sortOrder: dto.sortOrder ?? 0,

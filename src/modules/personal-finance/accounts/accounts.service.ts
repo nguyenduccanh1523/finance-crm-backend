@@ -5,7 +5,7 @@ import { Account } from '../entities/account.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { AdminCreateAccountDto } from './dto/admin-create-account.dto';
+import { AdminCreateAccountDto } from './dto/admin-create-account-unified.dto';
 import { personalErrors } from '../common/personal.errors';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
 import { PersonalQuotaKeys } from '../common/personal.constants';
@@ -83,17 +83,64 @@ export class AccountsService {
     return { ok: true };
   }
 
-  // -------- ADMIN --------
-  async adminCreate(userId: string, dto: AdminCreateAccountDto) {
+  // -------- ADMIN - Unified Endpoint --------
+  async adminCreate(dto: AdminCreateAccountDto) {
+    const defaultType = AccountType.CASH as any;
+
+    // Route by scope
+    if (dto.scope === 'workspace') {
+      if (!dto.workspaceId) {
+        throw personalErrors.invalidInput(
+          'workspaceId required for workspace scope',
+        );
+      }
+      return this.createWorkspaceAccount(dto.workspaceId, dto, defaultType);
+    }
+
+    if (dto.scope === 'user') {
+      if (!dto.userId) {
+        throw personalErrors.invalidInput('userId required for user scope');
+      }
+      return this.createUserAccount(dto.userId, dto, defaultType);
+    }
+
+    throw personalErrors.invalidInput('Invalid scope');
+  }
+
+  private async createWorkspaceAccount(
+    workspaceId: string,
+    dto: AdminCreateAccountDto,
+    defaultType: any,
+  ) {
+    // Get workspace to get default currency
+    const ws = await this.wsService.findById(workspaceId);
+    if (!ws) throw personalErrors.resourceNotFound('workspace');
+
+    const entity = this.accountRepo.create({
+      workspaceId,
+      name: dto.name,
+      type: dto.type ?? defaultType,
+      currency: ws.defaultCurrency,
+      openingBalanceCents: 0,
+      currentBalanceCents: 0,
+    });
+    return this.accountRepo.save(entity);
+  }
+
+  private async createUserAccount(
+    userId: string,
+    dto: AdminCreateAccountDto,
+    defaultType: any,
+  ) {
     const ws = await this.wsService.getOrCreateByUserId(userId);
 
     const entity = this.accountRepo.create({
       workspaceId: ws.id,
       name: dto.name ?? 'Untitled Account',
-      type: dto.type ?? (AccountType.CASH as any),
-      currency: dto.currency ?? ws.defaultCurrency,
-      openingBalanceCents: dto.openingBalanceCents ?? 0,
-      currentBalanceCents: dto.openingBalanceCents ?? 0,
+      type: dto.type ?? defaultType,
+      currency: ws.defaultCurrency,
+      openingBalanceCents: 0,
+      currentBalanceCents: 0,
     });
     return this.accountRepo.save(entity);
   }

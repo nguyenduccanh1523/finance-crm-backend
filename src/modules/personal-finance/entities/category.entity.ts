@@ -6,8 +6,8 @@ import { CategoryKind } from '../../../common/enums/category-kind.enum';
 @Entity({ name: 'categories' })
 @Index(['workspaceId', 'name', 'kind'], { unique: true })
 export class Category extends SoftDeleteEntity {
-  @Column({ name: 'workspace_id', type: 'uuid' })
-  workspaceId: string;
+  @Column({ name: 'workspace_id', type: 'uuid', nullable: true })
+  workspaceId?: string | null = null;
 
   @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
   workspace: PersonalWorkspace;

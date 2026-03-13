@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Tag } from '../entities/tag.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
@@ -8,7 +8,11 @@ import { PersonalQuotaKeys } from '../common/personal.constants';
 import { personalErrors } from '../common/personal.errors';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
-import { AdminCreateTagDto } from './dto/admin-create-tag.dto';
+import { AdminCreateTagDto } from './dto/admin-create-tag-unified.dto';
+import {
+  ListTagsResponseDto,
+  TagResponseDto,
+} from './dto/list-tags-response.dto';
 
 @Injectable()
 export class TagsService {
@@ -18,16 +22,60 @@ export class TagsService {
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
-  async list(user: any) {
+  async list(user: any): Promise<ListTagsResponseDto> {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.repo.find({
+
+    // Get global tags (workspaceId is null)
+    const globalTags = await this.repo.find({
+      where: { workspaceId: IsNull() as any, deletedAt: IsNull() as any },
+      order: { createdAt: 'DESC' as any },
+    });
+
+    // Get workspace tags
+    const workspaceTags = await this.repo.find({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { createdAt: 'DESC' as any },
     });
+
+    // Format response
+    const formatTag = (
+      tag: Tag,
+      scope: 'global' | 'workspace',
+    ): TagResponseDto => ({
+      id: tag.id,
+      workspaceId: tag.workspaceId,
+      name: tag.name,
+      color: tag.color,
+      scope,
+      createdAt: tag.createdAt,
+      updatedAt: tag.updatedAt,
+    });
+
+    return {
+      global: globalTags.map((tag) => formatTag(tag, 'global')),
+      workspace: workspaceTags.map((tag) => formatTag(tag, 'workspace')),
+    };
   }
 
   async create(user: any, dto: CreateTagDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
+
+    // Check for duplicate name + color combination
+    if (dto.name && dto.color) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: ws.id,
+          name: dto.name,
+          color: dto.color,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Tag with same name and color already exists',
+        );
+      }
+    }
 
     const used = await this.repo.count({
       where: { workspaceId: ws.id, deletedAt: IsNull() as any },
@@ -49,6 +97,26 @@ export class TagsService {
     });
     if (!tag) throw personalErrors.resourceNotFound('tag');
 
+    // Check for duplicate name + color combination (excluding current tag)
+    const newName = dto.name !== undefined ? dto.name : tag.name;
+    const newColor = dto.color !== undefined ? dto.color : tag.color;
+    if (newName && newColor) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId,
+          name: newName,
+          color: newColor,
+          id: Not(id),
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Tag with same name and color already exists',
+        );
+      }
+    }
+
     if (dto.name !== undefined) tag.name = dto.name;
     if (dto.color !== undefined) tag.color = dto.color;
 
@@ -65,9 +133,107 @@ export class TagsService {
     return { ok: true };
   }
 
-  // ADMIN
-  async adminCreate(userId: string, dto: AdminCreateTagDto) {
+  // ADMIN - Unified endpoint
+  async adminCreate(dto: AdminCreateTagDto) {
+    // Route by scope
+    if (dto.scope === 'global') {
+      return this.createGlobalTag(dto);
+    }
+
+    if (dto.scope === 'workspace') {
+      if (!dto.workspaceId) {
+        throw personalErrors.invalidInput(
+          'workspaceId required for workspace scope',
+        );
+      }
+      return this.createWorkspaceTag(dto.workspaceId, dto);
+    }
+
+    if (dto.scope === 'user') {
+      if (!dto.userId) {
+        throw personalErrors.invalidInput('userId required for user scope');
+      }
+      return this.createUserTag(dto.userId, dto);
+    }
+
+    throw personalErrors.invalidInput('Invalid scope');
+  }
+
+  private async createGlobalTag(dto: AdminCreateTagDto) {
+    // Check for duplicate name + color combination in global scope
+    if (dto.name && dto.color) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: IsNull() as any,
+          name: dto.name,
+          color: dto.color,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Global tag with same name and color already exists',
+        );
+      }
+    }
+
+    const entity = this.repo.create({
+      workspaceId: null,
+      name: dto.name,
+      color: dto.color,
+    });
+    return this.repo.save(entity);
+  }
+
+  private async createWorkspaceTag(
+    workspaceId: string,
+    dto: AdminCreateTagDto,
+  ) {
+    // Check for duplicate name + color combination in workspace scope
+    if (dto.name && dto.color) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId,
+          name: dto.name,
+          color: dto.color,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Workspace tag with same name and color already exists',
+        );
+      }
+    }
+
+    const entity = this.repo.create({
+      workspaceId,
+      name: dto.name,
+      color: dto.color,
+    });
+    return this.repo.save(entity);
+  }
+
+  private async createUserTag(userId: string, dto: AdminCreateTagDto) {
     const ws = await this.wsService.getOrCreateByUserId(userId);
+
+    // Check for duplicate name + color combination in user workspace
+    if (dto.name && dto.color) {
+      const duplicate = await this.repo.findOne({
+        where: {
+          workspaceId: ws.id,
+          name: dto.name,
+          color: dto.color,
+          deletedAt: IsNull() as any,
+        },
+      });
+      if (duplicate) {
+        throw personalErrors.invalidInput(
+          'Tag with same name and color already exists in user workspace',
+        );
+      }
+    }
+
     const entity = this.repo.create({
       workspaceId: ws.id,
       name: dto.name ?? 'Tag',

@@ -30,6 +30,10 @@ export class PersonalWorkspaceService {
     return ws.id;
   }
 
+  async findById(workspaceId: string) {
+    return this.wsRepo.findOne({ where: { id: workspaceId } });
+  }
+
   async updateWorkspace(userId: string, dto: UpdateWorkspaceDto) {
     const ws = await this.wsRepo.findOne({ where: { userId } });
     if (!ws) {

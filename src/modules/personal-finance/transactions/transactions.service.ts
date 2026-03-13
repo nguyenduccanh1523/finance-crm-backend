@@ -9,7 +9,7 @@ import { Category } from '../entities/category.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { AdminCreateTransactionDto } from './dto/admin-create-transaction.dto';
+import { AdminCreateTransactionDto } from './dto/admin-create-transaction-unified.dto';
 import { ListTransactionsQuery } from './dto/list-transactions.query';
 import { personalErrors } from '../common/personal.errors';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
@@ -305,8 +305,75 @@ export class TransactionsService {
     }
   }
 
-  // -------- ADMIN --------
-  async adminCreate(userId: string, dto: AdminCreateTransactionDto) {
+  // -------- ADMIN - Unified Endpoint --------
+  async adminCreate(dto: AdminCreateTransactionDto) {
+    // Route by scope
+    if (dto.scope === 'workspace') {
+      if (!dto.workspaceId) {
+        throw personalErrors.invalidInput(
+          'workspaceId required for workspace scope',
+        );
+      }
+      return this.createWorkspaceTransaction(dto.workspaceId, dto);
+    }
+
+    if (dto.scope === 'user') {
+      if (!dto.userId) {
+        throw personalErrors.invalidInput('userId required for user scope');
+      }
+      return this.createUserTransaction(dto.userId, dto);
+    }
+
+    throw personalErrors.invalidInput('Invalid scope');
+  }
+
+  private async createWorkspaceTransaction(
+    workspaceId: string,
+    dto: AdminCreateTransactionDto,
+  ) {
+    // Get workspace to get userId
+    const ws = await this.wsService.findById(workspaceId);
+    if (!ws) throw personalErrors.resourceNotFound('workspace');
+
+    // Ensure account
+    const acc = dto.accountId
+      ? await this.accountRepo.findOne({
+          where: {
+            id: dto.accountId,
+            workspaceId,
+            deletedAt: IsNull() as any,
+          },
+        })
+      : await this.accountsService.ensureDefaultAccount(ws.userId);
+
+    if (!acc)
+      throw personalErrors.invalidInput(
+        'Không thể xác định account để tạo transaction.',
+      );
+
+    const currency = dto.currency ?? acc.currency;
+
+    const txDto: CreateTransactionDto = {
+      accountId: acc.id,
+      type: (dto.type ?? (TransactionType.EXPENSE as any)) as any,
+      amountCents: dto.amountCents ?? 0,
+      currency,
+      occurredAt: dto.occurredAt ?? new Date().toISOString(),
+      categoryId: dto.categoryId,
+      note: dto.note ?? 'Admin created',
+      counterparty: dto.counterparty,
+      transferAccountId: dto.transferAccountId,
+      tagIds: dto.tagIds,
+    };
+
+    // bypass quota using SUPER_ADMIN role
+    return this.create({ id: ws.userId, role: 'SUPER_ADMIN' }, txDto);
+  }
+
+  private async createUserTransaction(
+    userId: string,
+    dto: AdminCreateTransactionDto,
+  ) {
     // admin DTO optional: ensure workspace + default account if missing
     const ws = await this.wsService.getOrCreateByUserId(userId);
     const acc = dto.accountId

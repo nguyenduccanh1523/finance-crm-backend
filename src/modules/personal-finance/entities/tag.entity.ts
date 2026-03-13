@@ -5,8 +5,8 @@ import { PersonalWorkspace } from './personal-workspace.entity';
 @Entity({ name: 'tags' })
 @Index(['workspaceId', 'name'], { unique: true })
 export class Tag extends SoftDeleteEntity {
-  @Column({ name: 'workspace_id', type: 'uuid' })
-  workspaceId: string;
+  @Column({ name: 'workspace_id', type: 'uuid', nullable: true })
+  workspaceId: string | null = null;
 
   @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
   workspace: PersonalWorkspace;
