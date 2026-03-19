@@ -16,7 +16,7 @@ export const FREE_FEATURES = {
     'personal.categories.max': 30,
     'personal.tags.max': 10,
     'personal.transactions.monthly': 200,
-    'personal.recurring_rules.max': 0,
+    'personal.recurring_rules.max': 1,
     'personal.attachments.max': 0,
   } as Record<string, number>,
 };

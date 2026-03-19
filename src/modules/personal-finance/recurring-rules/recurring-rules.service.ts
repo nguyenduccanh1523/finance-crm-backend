@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource, IsNull, LessThanOrEqual, Repository } from 'typeorm';
 import { RecurringRule } from '../entities/recurring-rule.entity';
 import { Transaction } from '../entities/transaction.entity';
@@ -15,6 +16,8 @@ import { TransactionType } from '../../../common/enums/transaction-type.enum';
 
 @Injectable()
 export class RecurringRulesService {
+  private readonly logger = new Logger(RecurringRulesService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(RecurringRule)
@@ -141,6 +144,19 @@ export class RecurringRulesService {
    * - create a transaction
    * - compute nextRunAt using rrule
    */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async processRecurringRules() {
+    try {
+      this.logger.log('🔄 Starting recurring rules processing...');
+      const result = await this.runDueRules();
+      this.logger.log(
+        `✅ Successfully processed ${result.processed} recurring rules`,
+      );
+    } catch (error) {
+      this.logger.error('❌ Error processing recurring rules:', error);
+    }
+  }
+
   async runDueRules(now = new Date()) {
     const due = await this.repo.find({
       where: {

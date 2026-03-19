@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { jwtConfig } from '../../../config/jwt.config';
 import { MailerModule } from '../mailer/mailer.module';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MailerModule } from '../mailer/mailer.module';
       secret: jwtConfig.accessSecret,
     }),
     MailerModule,
+    RbacModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

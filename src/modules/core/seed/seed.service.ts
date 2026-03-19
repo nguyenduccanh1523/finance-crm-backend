@@ -1,13 +1,15 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { Role } from '../rbac/role.entity';
 import { Permission } from '../rbac/permission.entity';
 import { RolePermission } from '../rbac/role-permission.entity';
-import { User } from '../users/user.entity';
 import { RoleScope } from '../../../common/enums/role-scope.enum';
 
+/**
+ * SeedService - Initialize roles and permissions at application startup
+ * Note: Global role assignments are done via API, not seeding
+ */
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
   constructor(
@@ -16,13 +18,12 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly permRepo: Repository<Permission>,
     @InjectRepository(RolePermission)
     private readonly rpRepo: Repository<RolePermission>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
   ) {}
 
   async onApplicationBootstrap() {
     await this.seedRolesAndPermissions();
-    await this.seedSuperAdminUser();
+    // Note: SEED_ADMIN_USER removed. Manually assign global roles via API.
+    // Use: POST /rbac/global-roles/assign { userId, roleId }
   }
 
   private async seedRolesAndPermissions() {
@@ -131,35 +132,7 @@ export class SeedService implements OnApplicationBootstrap {
     }
   }
 
-  private async seedSuperAdminUser() {
-    const email = process.env.SEED_ADMIN_EMAIL;
-    const password = process.env.SEED_ADMIN_PASSWORD;
-
-    if (!email || !password) {
-      console.warn(
-        '[Seed] SEED_ADMIN_EMAIL hoặc SEED_ADMIN_PASSWORD chưa cấu hình – bỏ qua seed admin',
-      );
-      return;
-    }
-
-    let user = await this.userRepo.findOne({ where: { email } });
-    if (!user) {
-      const hash = await bcrypt.hash(password, 10);
-      user = this.userRepo.create({
-        email,
-        passwordHash: hash,
-        fullName: 'Super Admin',
-        status: 1,
-        timezone: 'Asia/Ho_Chi_Minh',
-        defaultCurrency: 'VND',
-      });
-      await this.userRepo.save(user);
-      console.log('[Seed] Tạo user SUPER_ADMIN:', email);
-    } else {
-      console.log('[Seed] User SUPER_ADMIN đã tồn tại:', email);
-    }
-
-    // Bạn có thể lưu mapping user ↔ role global ở chỗ khác
-    // Vì role global ở đây là conceptual, chúng ta sẽ encode vào JWT khi login
-  }
+  // REMOVED: seedSuperAdminUser() - Use API to assign global roles instead
+  // API: POST /rbac/global-roles/assign { userId, roleId }
+  // This is cleaner and doesn't couple seeding to .env secrets
 }

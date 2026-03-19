@@ -26,6 +26,11 @@ export class TransactionsController {
     return this.service.list(user, q);
   }
 
+  @Get(':id')
+  getById(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.service.getById(user, id);
+  }
+
   @Post()
   create(@CurrentUser() user: any, @Body() dto: CreateTransactionDto) {
     return this.service.create(user, dto);

@@ -4,6 +4,7 @@ import { RoleScope } from '../../../common/enums/role-scope.enum';
 import { Organization } from '../organizations/organization.entity';
 import { RolePermission } from './role-permission.entity';
 import { Membership } from './membership.entity';
+import { UserRole } from './user-role.entity';
 
 @Entity({ name: 'roles' })
 @Index(['scope', 'orgId', 'name'], { unique: true })
@@ -31,4 +32,7 @@ export class Role extends BaseEntity {
 
   @OneToMany(() => Membership, (m) => m.role)
   memberships: Membership[];
+
+  @OneToMany(() => UserRole, (ur) => ur.role)
+  userRoles: UserRole[];
 }

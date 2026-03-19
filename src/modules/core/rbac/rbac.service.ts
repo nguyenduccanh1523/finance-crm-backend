@@ -1,145 +1,206 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import * as cacheManager from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Role } from './role.entity';
-import { Permission } from './permission.entity';
-import { RolePermission } from './role-permission.entity';
-import { Membership } from './membership.entity';
+import { BadRequestException } from '@nestjs/common';
+
+import { RoleRepository } from './repositories/role.repository';
+import { PermissionRepository } from './repositories/permission.repository';
+import { RolePermissionRepository } from './repositories/role-permission.repository';
+import { MembershipRepository } from './repositories/membership.repository';
+import { UserRoleRepository } from './repositories/user-role.repository';
+
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { AssignRolePermissionDto } from './dto/assign-role-permission.dto';
 import { AssignMembershipDto } from './dto/assign-membership.dto';
+import { RoleScope } from '../../../common/enums/role-scope.enum';
 
+/**
+ * RbacService - Business logic layer
+ * Không trực tiếp gọi database, mà thông qua repositories
+ * Nguyên tắc: Dependency Injection + Separation of Concerns
+ */
 @Injectable()
 export class RbacService {
   constructor(
-    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
-    @InjectRepository(Permission)
-    private readonly permRepo: Repository<Permission>,
-    @InjectRepository(RolePermission)
-    private readonly rpRepo: Repository<RolePermission>,
-    @InjectRepository(Membership)
-    private readonly membershipRepo: Repository<Membership>,
+    private readonly roleRepo: RoleRepository,
+    private readonly permRepo: PermissionRepository,
+    private readonly rpRepo: RolePermissionRepository,
+    private readonly membershipRepo: MembershipRepository,
+    private readonly userRoleRepo: UserRoleRepository,
     @Inject(CACHE_MANAGER) private readonly cache: cacheManager.Cache,
   ) {}
 
-  // ROLE CRUD
+  // ============ ROLE CRUD ============
   async createRole(dto: CreateRoleDto) {
-    const role = this.roleRepo.create(dto);
-    return this.roleRepo.save(role);
+    return this.roleRepo.create(dto);
   }
 
   async listRoles() {
-    return this.roleRepo.find();
+    return this.roleRepo.findAll();
   }
 
   async updateRole(id: string, dto: UpdateRoleDto) {
-    const role = await this.roleRepo.findOne({ where: { id } });
-    if (!role) throw new NotFoundException('Role not found');
-    Object.assign(role, dto);
-    return this.roleRepo.save(role);
+    return this.roleRepo.update(id, dto);
   }
 
   async deleteRole(id: string) {
     return this.roleRepo.delete(id);
   }
 
-  // PERMISSION CRUD
+  // ============ PERMISSION CRUD ============
   async createPermission(dto: CreatePermissionDto) {
-    const perm = this.permRepo.create(dto);
-    return this.permRepo.save(perm);
+    // Validate: permission code phải unique
+    const existing = await this.permRepo.findByCode(dto.code);
+    if (existing) {
+      throw new BadRequestException(
+        `Permission code '${dto.code}' already exists`,
+      );
+    }
+    return this.permRepo.create(dto);
   }
 
   async listPermissions() {
-    return this.permRepo.find();
+    return this.permRepo.findAll();
   }
 
-  // ROLE_PERMISSION
+  // ============ ROLE_PERMISSION ============
   async assignRolePermission(dto: AssignRolePermissionDto) {
-    const role = await this.roleRepo.findOne({ where: { id: dto.roleId } });
-    if (!role) throw new NotFoundException('Role not found');
+    // Validate role exists and is accessible
+    await this.roleRepo.findByIdOrThrow(dto.roleId);
 
-    const perm = await this.permRepo.findOne({
-      where: { id: dto.permissionId },
-    });
-    if (!perm) throw new NotFoundException('Permission not found');
+    // Validate permission exists
+    await this.permRepo.findByIdOrThrow(dto.permissionId);
 
-    let rp = await this.rpRepo.findOne({
-      where: { roleId: dto.roleId, permissionId: dto.permissionId },
-    });
-
-    if (!rp) {
-      rp = this.rpRepo.create({
-        roleId: dto.roleId,
-        permissionId: dto.permissionId,
-      });
-      await this.rpRepo.save(rp);
-
-      // ✅ CLEAR CACHE: tất cả user có role này
-      await this.clearRolePermissionCache(dto.roleId);
+    // Check if association already exists
+    const exists = await this.rpRepo.findByRoleAndPermission(
+      dto.roleId,
+      dto.permissionId,
+    );
+    if (exists) {
+      throw new BadRequestException('Permission already assigned to this role');
     }
 
-    return rp;
-  }
+    // Create association
+    const result = await this.rpRepo.create(dto.roleId, dto.permissionId);
 
-  private async clearUserPermissionCache(userId: string) {
-    await this.cache.del(`perm:global:user:${userId}`);
-  }
-
-  private async clearRolePermissionCache(roleId: string) {
-    const memberships = await this.membershipRepo.find({
-      where: { roleId },
-    });
-
-    for (const m of memberships) {
-      await this.clearUserPermissionCache(m.userId);
-    }
-  }
-
-  async removeRolePermission(dto: AssignRolePermissionDto) {
-    const result = await this.rpRepo.delete({
-      roleId: dto.roleId,
-      permissionId: dto.permissionId,
-    });
-
-    if (result.affected) {
-      // ✅ CLEAR CACHE cho toàn bộ user có role đó
-      await this.clearRolePermissionCache(dto.roleId);
-    }
+    // Clear cache cho tất cả users có role này
+    await this.clearCacheForRole(dto.roleId);
 
     return result;
   }
 
-  // MEMBERSHIP
-  async assignMembership(dto: AssignMembershipDto) {
-    let membership = await this.membershipRepo.findOne({
-      where: {
-        userId: dto.userId,
-        roleId: dto.roleId,
-      },
-    });
+  async removeRolePermission(dto: AssignRolePermissionDto) {
+    const deleted = await this.rpRepo.delete(dto.roleId, dto.permissionId);
 
-    if (!membership) {
-      membership = this.membershipRepo.create({
-        userId: dto.userId,
-        roleId: dto.roleId,
-      });
-      await this.membershipRepo.save(membership);
-
-      // ✅ CLEAR CACHE cho user này
-      await this.clearUserPermissionCache(dto.userId);
+    if (deleted) {
+      await this.clearCacheForRole(dto.roleId);
     }
 
-    return membership;
+    if (!deleted) {
+      throw new BadRequestException('Role permission not found');
+    }
+
+    return { success: true };
+  }
+
+  // ============ MEMBERSHIP (Organization Roles) ============
+  async assignMembership(dto: AssignMembershipDto) {
+    // Validate orgId is provided
+    if (!dto.orgId) {
+      throw new BadRequestException('orgId is required');
+    }
+
+    // Validate user & role exist
+    await this.roleRepo.findByIdOrThrow(dto.roleId);
+
+    // Check if membership already exists
+    const exists = await this.membershipRepo.findByUserAndOrg(
+      dto.userId,
+      dto.orgId,
+    );
+    if (exists) {
+      throw new BadRequestException(
+        'User is already member of this organization',
+      );
+    }
+
+    // Create membership
+    const result = await this.membershipRepo.create(dto);
+
+    // Clear cache cho user
+    await this.clearCacheForUser(dto.userId);
+
+    return result;
   }
 
   async listMembershipsByUser(userId: string) {
-    return this.membershipRepo.find({
-      where: { userId },
-      relations: ['role'],
-    });
+    return this.membershipRepo.findByUser(userId);
+  }
+
+  async listMembershipsByOrg(orgId: string) {
+    return this.membershipRepo.findByOrg(orgId);
+  }
+
+  // ============ GLOBAL ROLES (UserRole) ============
+  async assignGlobalRole(userId: string, roleId: string) {
+    // Validate role is GLOBAL scope
+    const role = await this.roleRepo.findByIdOrThrow(roleId);
+    if (role.scope !== RoleScope.GLOBAL) {
+      throw new BadRequestException(
+        'Only GLOBAL scope roles can be assigned as global roles',
+      );
+    }
+
+    // Check if already assigned
+    const exists = await this.userRoleRepo.findByUserAndRole(userId, roleId);
+    if (exists) {
+      throw new BadRequestException('User already has this global role');
+    }
+
+    // Create user role
+    const result = await this.userRoleRepo.create(userId, roleId);
+
+    // Clear JWT cache
+    await this.cache.del(`jwt:roles:${userId}`);
+
+    return result;
+  }
+
+  async removeGlobalRole(userId: string, roleId: string) {
+    const deleted = await this.userRoleRepo.delete(userId, roleId);
+
+    if (deleted) {
+      await this.cache.del(`jwt:roles:${userId}`);
+    }
+
+    if (!deleted) {
+      throw new BadRequestException('User global role not found');
+    }
+
+    return { success: true };
+  }
+
+  async getUserGlobalRoles(userId: string): Promise<string[]> {
+    return this.userRoleRepo.findRolesByUser(userId);
+  }
+
+  async listUsersByGlobalRole(roleId: string) {
+    return this.userRoleRepo.findByRole(roleId);
+  }
+
+  // ============ HELPER METHODS (Private) ============
+  private async clearCacheForUser(userId: string): Promise<void> {
+    await this.cache.del(`perm:global:user:${userId}`);
+    await this.cache.del(`jwt:roles:${userId}`);
+  }
+
+  private async clearCacheForRole(roleId: string): Promise<void> {
+    // Find all users with this role (via Membership)
+    const userIds = await this.membershipRepo.findUsersByRole(roleId);
+    for (const userId of userIds) {
+      await this.clearCacheForUser(userId);
+    }
   }
 }

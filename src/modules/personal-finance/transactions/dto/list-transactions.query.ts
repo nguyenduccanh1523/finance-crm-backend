@@ -4,8 +4,12 @@ import {
   IsUUID,
   IsEnum,
   IsString,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { TransactionType } from '../../../../common/enums/transaction-type.enum';
+import { Type } from 'class-transformer';
 
 export class ListTransactionsQuery {
   @IsOptional()
@@ -30,5 +34,26 @@ export class ListTransactionsQuery {
 
   @IsOptional()
   @IsString()
-  q?: string; // note/counterparty
+  q?: string; // note/counterparty search
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1; // Default: 1
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20; // Default: 20, Max: 100
+
+  @IsOptional()
+  @IsEnum(['occurredAt', 'amountCents', 'createdAt', 'updatedAt'])
+  sortBy?: string = 'occurredAt'; // Default: occurredAt
+
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  order?: 'ASC' | 'DESC' = 'DESC'; // Default: DESC (latest first)
 }

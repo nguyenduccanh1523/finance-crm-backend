@@ -12,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../users/user.entity';
 import { RefreshToken } from './refresh-token.entity';
+import { UserRoleService } from '../rbac/user-role.service';
 import { jwtConfig } from '../../../config/jwt.config';
 import { InvalidCredentialsException } from '../../../common/exceptions/auth-exceptions';
 import { Role } from '../rbac/role.entity';
@@ -36,6 +37,7 @@ export class AuthService {
     private readonly refreshTokenRepo: Repository<RefreshToken>,
     @InjectRepository(Role)
     private readonly roleRepo: Repository<Role>,
+    private readonly userRoleService: UserRoleService,
     private readonly jwtService: JwtService,
 
     // ⬇️🔥 Thêm Redis (CacheManager)
@@ -163,15 +165,8 @@ export class AuthService {
   }
 
   private async getUserGlobalRoles(userId: string): Promise<string[]> {
-    // Ở đây đơn giản là query xem user này có phải SUPER_ADMIN không.
-    // Tuỳ design của bạn, có thể có bảng user_global_roles riêng.
-    // Tạm thời: nếu email = SEED_ADMIN_EMAIL => SUPER_ADMIN
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) return [];
-    if (user.email === process.env.SEED_ADMIN_EMAIL) {
-      return ['SUPER_ADMIN'];
-    }
-    return [];
+    // Query từ user_roles table thông qua UserRoleService
+    return this.userRoleService.getUserGlobalRoles(userId);
   }
 
   private async signTokens(user: User) {

@@ -30,8 +30,14 @@ export class FeatureGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
     const user = req.user;
 
-    // bypass roles
-    if (user?.role === 'ADMIN' || user?.role === 'TEST') return true;
+    // ✅ BYPASS: SUPER_ADMIN, ADMIN luôn được phép
+    // Kiểm tra từ roles array trong JWT payload
+    if (
+      user?.roles?.includes('SUPER_ADMIN') ||
+      user?.roles?.includes('ADMIN')
+    ) {
+      return true;
+    }
 
     const orgId =
       req.headers['x-org-id'] || req.query?.orgId || req.body?.orgId;

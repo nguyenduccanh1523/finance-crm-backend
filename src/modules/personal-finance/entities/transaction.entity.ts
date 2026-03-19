@@ -1,9 +1,17 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { SoftDeleteEntity } from '../../../common/entities/soft-delete.entity';
 import { PersonalWorkspace } from './personal-workspace.entity';
 import { Account } from './account.entity';
 import { Category } from './category.entity';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
+import { TransactionTag } from './transaction-tag.entity';
 
 @Entity({ name: 'transactions' })
 @Index(['workspaceId', 'occurredAt'])
@@ -11,6 +19,7 @@ export class Transaction extends SoftDeleteEntity {
   @Column({ name: 'workspace_id', type: 'uuid' })
   workspaceId: string;
 
+  @JoinColumn({ name: 'workspace_id' })
   @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
   workspace: PersonalWorkspace;
 
@@ -18,7 +27,11 @@ export class Transaction extends SoftDeleteEntity {
   accountId: string;
 
   @ManyToOne(() => Account)
+  @JoinColumn({ name: 'account_id' })
   account: Account;
+
+  @OneToMany(() => TransactionTag, (tt) => tt.transaction)
+  transactionTags: TransactionTag[];
 
   @Column({ type: 'text' })
   type: TransactionType;
@@ -37,6 +50,7 @@ export class Transaction extends SoftDeleteEntity {
   categoryId?: string;
 
   @ManyToOne(() => Category, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
   category?: Category;
 
   @Column({ type: 'text', nullable: true })

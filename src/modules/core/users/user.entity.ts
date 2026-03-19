@@ -1,6 +1,7 @@
 import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Membership } from '../rbac/membership.entity';
+import { UserRole } from '../rbac/user-role.entity';
 import { Organization } from '../organizations/organization.entity';
 import { AuditLog } from '../rbac/audit-log.entity';
 import { RefreshToken } from '../auth/refresh-token.entity';
@@ -37,6 +38,9 @@ export class User extends BaseEntity {
     default: 'VND',
   })
   defaultCurrency: string;
+
+  @OneToMany(() => UserRole, (ur) => ur.user)
+  roles: UserRole[];
 
   @OneToMany(() => Membership, (m) => m.user)
   memberships: Membership[];
