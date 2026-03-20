@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Not, Repository } from 'typeorm';
-import { Tag } from '../entities/tag.entity';
+import { IsNull, Not } from 'typeorm';
+import { TagsRepository } from './tags.repository';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
 import { PersonalQuotaKeys } from '../common/personal.constants';
@@ -17,7 +16,7 @@ import {
 @Injectable()
 export class TagsService {
   constructor(
-    @InjectRepository(Tag) private readonly repo: Repository<Tag>,
+    private readonly repo: TagsRepository,
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
   ) {}
@@ -26,20 +25,14 @@ export class TagsService {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
     // Get global tags (workspaceId is null)
-    const globalTags = await this.repo.find({
-      where: { workspaceId: IsNull() as any, deletedAt: IsNull() as any },
-      order: { createdAt: 'DESC' as any },
-    });
+    const globalTags = await this.repo.findGlobalTags();
 
     // Get workspace tags
-    const workspaceTags = await this.repo.find({
-      where: { workspaceId, deletedAt: IsNull() as any },
-      order: { createdAt: 'DESC' as any },
-    });
+    const workspaceTags = await this.repo.findWorkspaceTags(workspaceId);
 
     // Format response
     const formatTag = (
-      tag: Tag,
+      tag: any,
       scope: 'global' | 'workspace',
     ): TagResponseDto => ({
       id: tag.id,
@@ -63,12 +56,10 @@ export class TagsService {
     // Check for duplicate name + color combination
     if (dto.name && dto.color) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: ws.id,
-          name: dto.name,
-          color: dto.color,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: ws.id,
+        name: dto.name,
+        color: dto.color,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -78,7 +69,8 @@ export class TagsService {
     }
 
     const used = await this.repo.count({
-      where: { workspaceId: ws.id, deletedAt: IsNull() as any },
+      workspaceId: ws.id,
+      deletedAt: IsNull() as any,
     });
     await this.policy.assertQuota(user, PersonalQuotaKeys.TAGS_MAX, used);
 
@@ -92,24 +84,19 @@ export class TagsService {
 
   async update(user: any, id: string, dto: UpdateTagDto) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const tag = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const tag = await this.repo.findById(id, workspaceId);
     if (!tag) throw personalErrors.resourceNotFound('tag');
 
     // Check for duplicate name + color combination (excluding current tag)
     const newName = dto.name !== undefined ? dto.name : tag.name;
     const newColor = dto.color !== undefined ? dto.color : tag.color;
     if (newName && newColor) {
-      const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId,
-          name: newName,
-          color: newColor,
-          id: Not(id),
-          deletedAt: IsNull() as any,
-        },
-      });
+      const duplicate = await this.repo.findByExcluding(
+        workspaceId,
+        newName,
+        newColor,
+        id,
+      );
       if (duplicate) {
         throw personalErrors.invalidInput(
           'Tag with same name and color already exists',
@@ -125,11 +112,9 @@ export class TagsService {
 
   async remove(user: any, id: string) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const tag = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const tag = await this.repo.findById(id, workspaceId);
     if (!tag) throw personalErrors.resourceNotFound('tag');
-    await this.repo.softDelete({ id });
+    await this.repo.softDelete(id);
     return { ok: true };
   }
 
@@ -163,12 +148,10 @@ export class TagsService {
     // Check for duplicate name + color combination in global scope
     if (dto.name && dto.color) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: IsNull() as any,
-          name: dto.name,
-          color: dto.color,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: IsNull() as any,
+        name: dto.name,
+        color: dto.color,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -192,12 +175,10 @@ export class TagsService {
     // Check for duplicate name + color combination in workspace scope
     if (dto.name && dto.color) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId,
-          name: dto.name,
-          color: dto.color,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId,
+        name: dto.name,
+        color: dto.color,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -220,12 +201,10 @@ export class TagsService {
     // Check for duplicate name + color combination in user workspace
     if (dto.name && dto.color) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: ws.id,
-          name: dto.name,
-          color: dto.color,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: ws.id,
+        name: dto.name,
+        color: dto.color,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(

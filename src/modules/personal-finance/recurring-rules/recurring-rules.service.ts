@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { DataSource, IsNull, LessThanOrEqual, Repository } from 'typeorm';
+import { DataSource, IsNull, LessThanOrEqual } from 'typeorm';
 import { RecurringRule } from '../entities/recurring-rule.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { Account } from '../entities/account.entity';
-import { Category } from '../entities/category.entity';
+import { RecurringRulesRepository } from './recurring-rules.repository';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
 import { PersonalQuotaKeys } from '../common/personal.constants';
@@ -20,51 +19,30 @@ export class RecurringRulesService {
 
   constructor(
     private readonly dataSource: DataSource,
-    @InjectRepository(RecurringRule)
-    private readonly repo: Repository<RecurringRule>,
-    @InjectRepository(Account)
-    private readonly accountRepo: Repository<Account>,
-    @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>,
-    @InjectRepository(Transaction)
-    private readonly txRepo: Repository<Transaction>,
+    private readonly repo: RecurringRulesRepository,
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
   async list(user: any) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.repo.find({
-      where: { workspaceId, deletedAt: IsNull() as any },
-      order: { nextRunAt: 'ASC' as any },
-    });
+    return this.repo.list(workspaceId);
   }
 
   async create(user: any, dto: CreateRecurringRuleDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
 
     const used = await this.repo.count({
-      where: { workspaceId: ws.id, deletedAt: IsNull() as any },
+      workspaceId: ws.id,
+      deletedAt: IsNull() as any,
     });
     await this.policy.assertQuota(user, PersonalQuotaKeys.RECURRING_MAX, used);
 
-    const acc = await this.accountRepo.findOne({
-      where: {
-        id: dto.accountId,
-        workspaceId: ws.id,
-        deletedAt: IsNull() as any,
-      },
-    });
+    const acc = await this.repo.findAccount(dto.accountId, ws.id);
     if (!acc) throw personalErrors.invalidInput('accountId không hợp lệ.');
 
     if (dto.categoryId) {
-      const cat = await this.categoryRepo.findOne({
-        where: {
-          id: dto.categoryId,
-          workspaceId: ws.id,
-          deletedAt: IsNull() as any,
-        },
-      });
+      const cat = await this.repo.findCategory(dto.categoryId, ws.id);
       if (!cat) throw personalErrors.invalidInput('categoryId không hợp lệ.');
     }
 
@@ -84,32 +62,18 @@ export class RecurringRulesService {
 
   async update(user: any, id: string, dto: UpdateRecurringRuleDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
-    const rule = await this.repo.findOne({
-      where: { id, workspaceId: ws.id, deletedAt: IsNull() as any },
-    });
+    const rule = await this.repo.findOne(id, ws.id);
     if (!rule) throw personalErrors.resourceNotFound('recurring rule');
 
     if (dto.accountId) {
-      const acc = await this.accountRepo.findOne({
-        where: {
-          id: dto.accountId,
-          workspaceId: ws.id,
-          deletedAt: IsNull() as any,
-        },
-      });
+      const acc = await this.repo.findAccount(dto.accountId, ws.id);
       if (!acc) throw personalErrors.invalidInput('accountId không hợp lệ.');
       rule.accountId = dto.accountId;
       if (!dto.currency) rule.currency = acc.currency;
     }
     if (dto.categoryId !== undefined) {
       if (dto.categoryId) {
-        const cat = await this.categoryRepo.findOne({
-          where: {
-            id: dto.categoryId,
-            workspaceId: ws.id,
-            deletedAt: IsNull() as any,
-          },
-        });
+        const cat = await this.repo.findCategory(dto.categoryId, ws.id);
         if (!cat) throw personalErrors.invalidInput('categoryId không hợp lệ.');
         rule.categoryId = dto.categoryId;
       } else {
@@ -129,11 +93,9 @@ export class RecurringRulesService {
 
   async remove(user: any, id: string) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
-    const rule = await this.repo.findOne({
-      where: { id, workspaceId: ws.id, deletedAt: IsNull() as any },
-    });
+    const rule = await this.repo.findOne(id, ws.id);
     if (!rule) throw personalErrors.resourceNotFound('recurring rule');
-    await this.repo.softDelete({ id });
+    await this.repo.softDelete(id);
     return { ok: true };
   }
 
@@ -158,14 +120,7 @@ export class RecurringRulesService {
   }
 
   async runDueRules(now = new Date()) {
-    const due = await this.repo.find({
-      where: {
-        deletedAt: IsNull() as any,
-        nextRunAt: LessThanOrEqual(now) as any,
-      },
-      take: 200,
-      order: { nextRunAt: 'ASC' as any },
-    });
+    const due = await this.repo.findDueRules(now);
 
     for (const rule of due) {
       if (rule.endAt && rule.endAt < now) continue;

@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
-import { Goal } from '../entities/goal.entity';
+import { GoalsRepository } from './goals.repository';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { personalErrors } from '../common/personal.errors';
 import { CreateGoalDto } from './dto/create-goal.dto';
@@ -10,16 +8,13 @@ import { UpdateGoalDto } from './dto/update-goal.dto';
 @Injectable()
 export class GoalsService {
   constructor(
-    @InjectRepository(Goal) private readonly repo: Repository<Goal>,
+    private readonly repo: GoalsRepository,
     private readonly wsService: PersonalWorkspaceService,
   ) {}
 
   async list(user: any) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.repo.find({
-      where: { workspaceId, deletedAt: IsNull() as any },
-      order: { createdAt: 'DESC' as any },
-    });
+    return this.repo.list(workspaceId);
   }
 
   async create(user: any, dto: CreateGoalDto) {
@@ -37,9 +32,7 @@ export class GoalsService {
 
   async update(user: any, id: string, dto: UpdateGoalDto) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const g = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const g = await this.repo.findOne(id, workspaceId);
     if (!g) throw personalErrors.resourceNotFound('goal');
 
     if (dto.name !== undefined) g.name = dto.name;
@@ -55,11 +48,9 @@ export class GoalsService {
 
   async remove(user: any, id: string) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const g = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const g = await this.repo.findOne(id, workspaceId);
     if (!g) throw personalErrors.resourceNotFound('goal');
-    await this.repo.softDelete({ id });
+    await this.repo.softDelete(id);
     return { ok: true };
   }
 }

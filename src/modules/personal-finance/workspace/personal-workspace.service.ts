@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PersonalWorkspace } from '../entities/personal-workspace.entity';
+import { PersonalWorkspaceRepository } from './personal-workspace.repository';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class PersonalWorkspaceService {
-  constructor(
-    @InjectRepository(PersonalWorkspace)
-    private readonly wsRepo: Repository<PersonalWorkspace>,
-  ) {}
+  constructor(private readonly repo: PersonalWorkspaceRepository) {}
 
   async getOrCreateByUserId(userId: string) {
-    let ws = await this.wsRepo.findOne({ where: { userId } });
+    let ws = await this.repo.findByUserId(userId);
     if (!ws) {
-      ws = this.wsRepo.create({
+      ws = this.repo.create({
         userId,
         name: 'My Workspace',
         timezone: 'Asia/Ho_Chi_Minh',
         defaultCurrency: 'VND',
       });
-      ws = await this.wsRepo.save(ws);
+      ws = await this.repo.save(ws);
     }
     return ws;
   }
@@ -31,11 +26,11 @@ export class PersonalWorkspaceService {
   }
 
   async findById(workspaceId: string) {
-    return this.wsRepo.findOne({ where: { id: workspaceId } });
+    return this.repo.findById(workspaceId);
   }
 
   async updateWorkspace(userId: string, dto: UpdateWorkspaceDto) {
-    const ws = await this.wsRepo.findOne({ where: { userId } });
+    const ws = await this.repo.findByUserId(userId);
     if (!ws) {
       throw new Error('Workspace not found');
     }
@@ -44,6 +39,6 @@ export class PersonalWorkspaceService {
     if (dto.timezone) ws.timezone = dto.timezone;
     if (dto.defaultCurrency) ws.defaultCurrency = dto.defaultCurrency;
 
-    return await this.wsRepo.save(ws);
+    return await this.repo.save(ws);
   }
 }

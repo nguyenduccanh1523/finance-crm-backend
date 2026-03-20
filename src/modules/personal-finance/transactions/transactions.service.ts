@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { IsNull } from 'typeorm';
+import { TransactionsRepository } from './transactions.repository';
 import { Transaction } from '../entities/transaction.entity';
-import { Account } from '../entities/account.entity';
-import { Tag } from '../entities/tag.entity';
 import { TransactionTag } from '../entities/transaction-tag.entity';
+import { Account } from '../entities/account.entity';
 import { Category } from '../entities/category.entity';
+import { Tag } from '../entities/tag.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -20,16 +20,7 @@ import { AccountsService } from '../accounts/accounts.service';
 @Injectable()
 export class TransactionsService {
   constructor(
-    private readonly dataSource: DataSource,
-    @InjectRepository(Transaction)
-    private readonly txRepo: Repository<Transaction>,
-    @InjectRepository(Account)
-    private readonly accountRepo: Repository<Account>,
-    @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>,
-    @InjectRepository(Tag) private readonly tagRepo: Repository<Tag>,
-    @InjectRepository(TransactionTag)
-    private readonly txTagRepo: Repository<TransactionTag>,
+    private readonly repo: TransactionsRepository,
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
     private readonly accountsService: AccountsService,
@@ -66,13 +57,8 @@ export class TransactionsService {
     };
     const orderColumn = sortColumnMap[sortBy] || 't.occurredAt';
 
-    const qb = this.txRepo
-      .createQueryBuilder('t')
-      .leftJoinAndSelect('t.transactionTags', 'tt')
-      .leftJoinAndSelect('tt.tag', 'tag', 'tag.deleted_at IS NULL')
-      .leftJoinAndSelect('t.category', 'cat')
-      .leftJoinAndSelect('t.account', 'acc')
-      .leftJoinAndSelect('t.workspace', 'ws')
+    const qb = this.repo
+      .getQueryBuilder()
       .where('t.workspace_id = :workspaceId', { workspaceId })
       .andWhere('t.deleted_at IS NULL');
 
@@ -114,35 +100,15 @@ export class TransactionsService {
     // quota: transactions per month
     const occurred = new Date(dto.occurredAt);
     const { start, end } = this.monthRange(occurred);
-    const used = await this.txRepo
-      .createQueryBuilder('t')
-      .where('t.workspace_id = :workspaceId', { workspaceId: ws.id })
-      .andWhere('t.deleted_at IS NULL')
-      .andWhere('t.occurred_at >= :start AND t.occurred_at < :end', {
-        start,
-        end,
-      })
-      .getCount();
+    const used = await this.repo.countByMonthRange(ws.id, start, end);
     await this.policy.assertQuota(user, PersonalQuotaKeys.TX_MONTHLY, used);
 
     // ownership checks
-    const account = await this.accountRepo.findOne({
-      where: {
-        id: dto.accountId,
-        workspaceId: ws.id,
-        deletedAt: IsNull() as any,
-      },
-    });
+    const account = await this.repo.findAccount(dto.accountId, ws.id);
     if (!account) throw personalErrors.invalidInput('accountId không hợp lệ.');
 
     if (dto.categoryId) {
-      const cat = await this.categoryRepo.findOne({
-        where: {
-          id: dto.categoryId,
-          workspaceId: ws.id,
-          deletedAt: IsNull() as any,
-        },
-      });
+      const cat = await this.repo.findCategory(dto.categoryId, ws.id);
       if (!cat) throw personalErrors.invalidInput('categoryId không hợp lệ.');
     }
 
@@ -155,13 +121,7 @@ export class TransactionsService {
         throw personalErrors.invalidInput(
           'transferAccountId phải khác accountId.',
         );
-      const toAcc = await this.accountRepo.findOne({
-        where: {
-          id: dto.transferAccountId,
-          workspaceId: ws.id,
-          deletedAt: IsNull() as any,
-        },
-      });
+      const toAcc = await this.repo.findAccount(dto.transferAccountId, ws.id);
       if (!toAcc)
         throw personalErrors.invalidInput('transferAccountId không hợp lệ.');
     }
@@ -169,7 +129,8 @@ export class TransactionsService {
     // Always use account currency to ensure data integrity
     const currency = account.currency;
 
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.repo.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
@@ -214,18 +175,7 @@ export class TransactionsService {
   async getById(user: any, id: string) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
 
-    const tx = await this.txRepo
-      .createQueryBuilder('t')
-      .leftJoinAndSelect('t.transactionTags', 'tt')
-      .leftJoinAndSelect('tt.tag', 'tag', 'tag.deleted_at IS NULL')
-      .leftJoinAndSelect('t.category', 'cat')
-      .leftJoinAndSelect('t.account', 'acc')
-      .leftJoinAndSelect('t.workspace', 'ws')
-      .where('t.id = :id', { id })
-      .andWhere('t.workspace_id = :workspaceId', { workspaceId: ws.id })
-      .andWhere('t.deleted_at IS NULL')
-      .getOne();
-
+    const tx = await this.repo.findById(id, ws.id);
     if (!tx) throw personalErrors.resourceNotFound('transaction');
     return this.transformTransactionWithTags(tx);
   }
@@ -233,7 +183,8 @@ export class TransactionsService {
   async update(user: any, id: string, dto: UpdateTransactionDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
 
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.repo.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
@@ -340,7 +291,8 @@ export class TransactionsService {
   async remove(user: any, id: string) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
 
-    const queryRunner = this.dataSource.createQueryRunner();
+    const dataSource = this.repo.getDataSource();
+    const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
@@ -397,13 +349,7 @@ export class TransactionsService {
 
     // Ensure account
     const acc = dto.accountId
-      ? await this.accountRepo.findOne({
-          where: {
-            id: dto.accountId,
-            workspaceId,
-            deletedAt: IsNull() as any,
-          },
-        })
+      ? await this.repo.findAccount(dto.accountId, workspaceId)
       : await this.accountsService.ensureDefaultAccount(ws.userId);
 
     if (!acc)
@@ -437,13 +383,7 @@ export class TransactionsService {
     // admin DTO optional: ensure workspace + default account if missing
     const ws = await this.wsService.getOrCreateByUserId(userId);
     const acc = dto.accountId
-      ? await this.accountRepo.findOne({
-          where: {
-            id: dto.accountId,
-            workspaceId: ws.id,
-            deletedAt: IsNull() as any,
-          },
-        })
+      ? await this.repo.findAccount(dto.accountId, ws.id)
       : await this.accountsService.ensureDefaultAccount(userId);
 
     if (!acc)

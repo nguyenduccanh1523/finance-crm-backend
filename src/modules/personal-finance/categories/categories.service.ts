@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Not, Repository } from 'typeorm';
-import { Category } from '../entities/category.entity';
+import { IsNull, Not } from 'typeorm';
+import { CategoriesRepository } from './categories.repository';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { PersonalPlanPolicyService } from '../common/personal-plan-policy.service';
 import { PersonalQuotaKeys } from '../common/personal.constants';
@@ -18,7 +17,7 @@ import {
 @Injectable()
 export class CategoriesService {
   constructor(
-    @InjectRepository(Category) private readonly repo: Repository<Category>,
+    private readonly repo: CategoriesRepository,
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
   ) {}
@@ -27,20 +26,15 @@ export class CategoriesService {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
     // Get global categories (workspaceId is null)
-    const globalCategories = await this.repo.find({
-      where: { workspaceId: IsNull() as any, deletedAt: IsNull() as any },
-      order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
-    });
+    const globalCategories = await this.repo.findGlobalCategories();
 
     // Get workspace categories
-    const workspaceCategories = await this.repo.find({
-      where: { workspaceId, deletedAt: IsNull() as any },
-      order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
-    });
+    const workspaceCategories =
+      await this.repo.findWorkspaceCategories(workspaceId);
 
     // Format response
     const formatCategory = (
-      cat: Category,
+      cat: any,
       scope: 'global' | 'workspace',
     ): CategoryResponseDto => ({
       id: cat.id,
@@ -69,12 +63,10 @@ export class CategoriesService {
     // Check for duplicate name + icon combination
     if (dto.name && dto.icon) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: ws.id,
-          name: dto.name,
-          icon: dto.icon,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: ws.id,
+        name: dto.name,
+        icon: dto.icon,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -84,7 +76,8 @@ export class CategoriesService {
     }
 
     const used = await this.repo.count({
-      where: { workspaceId: ws.id, deletedAt: IsNull() as any },
+      workspaceId: ws.id,
+      deletedAt: IsNull() as any,
     });
     await this.policy.assertQuota(user, PersonalQuotaKeys.CATEGORIES_MAX, used);
 
@@ -101,24 +94,19 @@ export class CategoriesService {
 
   async update(user: any, id: string, dto: UpdateCategoryDto) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const cat = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const cat = await this.repo.findById(id, workspaceId);
     if (!cat) throw personalErrors.resourceNotFound('category');
 
     // Check for duplicate name + icon combination (excluding current category)
     const newName = dto.name !== undefined ? dto.name : cat.name;
     const newIcon = dto.icon !== undefined ? dto.icon : cat.icon;
     if (newName && newIcon) {
-      const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId,
-          name: newName,
-          icon: newIcon,
-          id: Not(id),
-          deletedAt: IsNull() as any,
-        },
-      });
+      const duplicate = await this.repo.findByExcluding(
+        workspaceId,
+        newName,
+        newIcon,
+        id,
+      );
       if (duplicate) {
         throw personalErrors.invalidInput(
           'Category with same name and icon already exists',
@@ -137,11 +125,9 @@ export class CategoriesService {
 
   async remove(user: any, id: string) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const cat = await this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const cat = await this.repo.findById(id, workspaceId);
     if (!cat) throw personalErrors.resourceNotFound('category');
-    await this.repo.softDelete({ id });
+    await this.repo.softDelete(id);
     return { ok: true };
   }
 
@@ -180,12 +166,10 @@ export class CategoriesService {
     // Check for duplicate name + icon combination in global scope
     if (dto.name && dto.icon) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: IsNull() as any,
-          name: dto.name,
-          icon: dto.icon,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: IsNull() as any,
+        name: dto.name,
+        icon: dto.icon,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -213,12 +197,10 @@ export class CategoriesService {
     // Check for duplicate name + icon combination in workspace scope
     if (dto.name && dto.icon) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId,
-          name: dto.name,
-          icon: dto.icon,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId,
+        name: dto.name,
+        icon: dto.icon,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(
@@ -248,12 +230,10 @@ export class CategoriesService {
     // Check for duplicate name + icon combination in user workspace
     if (dto.name && dto.icon) {
       const duplicate = await this.repo.findOne({
-        where: {
-          workspaceId: ws.id,
-          name: dto.name,
-          icon: dto.icon,
-          deletedAt: IsNull() as any,
-        },
+        workspaceId: ws.id,
+        name: dto.name,
+        icon: dto.icon,
+        deletedAt: IsNull() as any,
       });
       if (duplicate) {
         throw personalErrors.invalidInput(

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
-import { Account } from '../entities/account.entity';
+import { IsNull } from 'typeorm';
+import { AccountsRepository } from './accounts.repository';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
@@ -14,33 +13,27 @@ import { AccountType } from '../../../common/enums/account-type.enum';
 @Injectable()
 export class AccountsService {
   constructor(
-    @InjectRepository(Account)
-    private readonly accountRepo: Repository<Account>,
+    private readonly repo: AccountsRepository,
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
   async list(user: any) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.accountRepo.find({
-      where: { workspaceId, deletedAt: IsNull() as any },
-      order: { createdAt: 'DESC' as any },
-    });
+    return this.repo.list(workspaceId);
   }
 
   async create(user: any, dto: CreateAccountDto) {
     const ws = await this.wsService.getOrCreateByUserId(user.id);
 
     // quota check
-    const used = await this.accountRepo.count({
-      where: { workspaceId: ws.id, deletedAt: IsNull() as any },
-    });
+    const used = await this.repo.count(ws.id);
     await this.policy.assertQuota(user, PersonalQuotaKeys.ACCOUNTS_MAX, used);
 
     const currency = dto.currency ?? ws.defaultCurrency;
     const opening = dto.openingBalanceCents ?? 0;
 
-    const entity = this.accountRepo.create({
+    const entity = this.repo.create({
       workspaceId: ws.id,
       name: dto.name,
       type: dto.type,
@@ -48,14 +41,12 @@ export class AccountsService {
       openingBalanceCents: opening,
       currentBalanceCents: opening,
     });
-    return this.accountRepo.save(entity);
+    return this.repo.save(entity);
   }
 
   async update(user: any, id: string, dto: UpdateAccountDto) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const acc = await this.accountRepo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const acc = await this.repo.findOne(id, workspaceId);
     if (!acc) throw personalErrors.resourceNotFound('account');
 
     if (dto.openingBalanceCents !== undefined) {
@@ -70,16 +61,14 @@ export class AccountsService {
     if (dto.type !== undefined) acc.type = dto.type;
     if (dto.currency !== undefined) acc.currency = dto.currency;
 
-    return this.accountRepo.save(acc);
+    return this.repo.save(acc);
   }
 
   async remove(user: any, id: string) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    const acc = await this.accountRepo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    const acc = await this.repo.findOne(id, workspaceId);
     if (!acc) throw personalErrors.resourceNotFound('account');
-    await this.accountRepo.softDelete({ id });
+    await this.repo.softDelete(id);
     return { ok: true };
   }
 
@@ -116,7 +105,7 @@ export class AccountsService {
     const ws = await this.wsService.findById(workspaceId);
     if (!ws) throw personalErrors.resourceNotFound('workspace');
 
-    const entity = this.accountRepo.create({
+    const entity = this.repo.create({
       workspaceId,
       name: dto.name,
       type: dto.type ?? defaultType,
@@ -124,7 +113,7 @@ export class AccountsService {
       openingBalanceCents: 0,
       currentBalanceCents: 0,
     });
-    return this.accountRepo.save(entity);
+    return this.repo.save(entity);
   }
 
   private async createUserAccount(
@@ -134,7 +123,7 @@ export class AccountsService {
   ) {
     const ws = await this.wsService.getOrCreateByUserId(userId);
 
-    const entity = this.accountRepo.create({
+    const entity = this.repo.create({
       workspaceId: ws.id,
       name: dto.name ?? 'Untitled Account',
       type: dto.type ?? defaultType,
@@ -142,19 +131,16 @@ export class AccountsService {
       openingBalanceCents: 0,
       currentBalanceCents: 0,
     });
-    return this.accountRepo.save(entity);
+    return this.repo.save(entity);
   }
 
   async ensureDefaultAccount(userId: string) {
     const ws = await this.wsService.getOrCreateByUserId(userId);
-    let acc = await this.accountRepo.findOne({
-      where: { workspaceId: ws.id, deletedAt: IsNull() as any },
-      order: { createdAt: 'ASC' as any },
-    });
+    let acc = await this.repo.findFirst(ws.id);
     if (acc) return acc;
 
-    acc = await this.accountRepo.save(
-      this.accountRepo.create({
+    acc = await this.repo.save(
+      this.repo.create({
         workspaceId: ws.id,
         name: 'Cash',
         type: AccountType.CASH as any,
