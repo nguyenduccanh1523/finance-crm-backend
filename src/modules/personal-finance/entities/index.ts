@@ -6,5 +6,7 @@ export * from './transaction.entity';
 export * from './transaction-tag.entity';
 export * from './recurring-rule.entity';
 export * from './budget.entity';
+export * from './budget-transaction.entity';
 export * from './goal.entity';
+export * from './goal-transaction.entity';
 export * from './attachment.entity';

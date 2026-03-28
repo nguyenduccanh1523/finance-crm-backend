@@ -18,7 +18,6 @@ import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 
 @UseGuards(JwtAuthGuard, FeatureGuard)
-@RequireFeatures(FeatureCodes.FINANCE_REPORTS)
 @Controller('personal/budgets')
 export class BudgetsController {
   constructor(private readonly service: BudgetsService) {}
@@ -26,6 +25,11 @@ export class BudgetsController {
   @Get()
   list(@CurrentUser() user: any) {
     return this.service.list(user);
+  }
+
+  @Get(':id')
+  getOne(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.service.getOne(user, id);
   }
 
   @Post()

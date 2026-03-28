@@ -49,6 +49,9 @@ import { GoalsRepository } from './goals/goals.repository';
 import { RecurringRulesService } from './recurring-rules/recurring-rules.service';
 import { RecurringRulesController } from './recurring-rules/recurring-rules.controller';
 import { RecurringRulesRepository } from './recurring-rules/recurring-rules.repository';
+
+import { RepositoriesModule } from './repositories.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from '../billing/billing.module';
 
 @Module({
@@ -66,6 +69,8 @@ import { BillingModule } from '../billing/billing.module';
       Attachment,
     ]),
     BillingModule,
+    RepositoriesModule,
+    AnalyticsModule,
   ],
   controllers: [
     PersonalWorkspaceController,

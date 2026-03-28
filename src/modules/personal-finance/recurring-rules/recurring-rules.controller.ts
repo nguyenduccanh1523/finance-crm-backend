@@ -18,7 +18,6 @@ import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
 
 @UseGuards(JwtAuthGuard, FeatureGuard)
-@RequireFeatures(FeatureCodes.FINANCE_REPORTS)
 @Controller('personal/recurring-rules')
 export class RecurringRulesController {
   constructor(private readonly service: RecurringRulesService) {}
@@ -29,11 +28,13 @@ export class RecurringRulesController {
   }
 
   @Post()
+  @RequireFeatures(FeatureCodes.FINANCE_REPORTS)
   create(@CurrentUser() user: any, @Body() dto: CreateRecurringRuleDto) {
     return this.service.create(user, dto);
   }
 
   @Patch(':id')
+  @RequireFeatures(FeatureCodes.FINANCE_REPORTS)
   update(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -43,6 +44,7 @@ export class RecurringRulesController {
   }
 
   @Delete(':id')
+  @RequireFeatures(FeatureCodes.FINANCE_REPORTS)
   remove(@CurrentUser() user: any, @Param('id') id: string) {
     return this.service.remove(user, id);
   }

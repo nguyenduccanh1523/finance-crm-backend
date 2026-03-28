@@ -15,6 +15,10 @@ export class CreateBudgetDto {
   @IsUUID()
   categoryId?: string;
 
+  @IsOptional()
+  @IsUUID()
+  accountId?: string; // Nếu không truyền, dùng primary account
+
   @IsInt()
   @Min(0)
   amountLimitCents: number;

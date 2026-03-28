@@ -21,6 +21,19 @@ import { ListTransactionsQuery } from './dto/list-transactions.query';
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
 
+  @Get('linked-to-budget/:budgetId')
+  getLinkedToBudget(
+    @CurrentUser() user: any,
+    @Param('budgetId') budgetId: string,
+  ) {
+    return this.service.getLinkedToBudget(user, budgetId);
+  }
+
+  @Get('linked-to-goal/:goalId')
+  getLinkedToGoal(@CurrentUser() user: any, @Param('goalId') goalId: string) {
+    return this.service.getLinkedToGoal(user, goalId);
+  }
+
   @Get()
   list(@CurrentUser() user: any, @Query() q: ListTransactionsQuery) {
     return this.service.list(user, q);

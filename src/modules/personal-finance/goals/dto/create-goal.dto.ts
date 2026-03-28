@@ -1,4 +1,12 @@
-import { IsDateString, IsEnum, IsInt, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { GoalStatus } from '../../../../common/enums/goal-status.enum';
 
 export class CreateGoalDto {
@@ -11,6 +19,15 @@ export class CreateGoalDto {
 
   @IsDateString()
   targetDate: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentAmountCents?: number; // default: 0
+
+  @IsOptional()
+  @IsUUID()
+  accountId?: string; // Nếu không truyền, dùng primary account
 
   @IsEnum(GoalStatus)
   status: GoalStatus;

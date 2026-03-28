@@ -16,9 +16,10 @@ import { CurrentUser } from 'src/modules/core/auth/decorators/current-user.decor
 import { GoalsService } from './goals.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
+import { AllocateGoalDto } from './dto/allocate-goal.dto';
+import { WithdrawGoalDto } from './dto/withdraw-goal.dto';
 
 @UseGuards(JwtAuthGuard, FeatureGuard)
-@RequireFeatures(FeatureCodes.FINANCE_REPORTS)
 @Controller('personal/goals')
 export class GoalsController {
   constructor(private readonly service: GoalsService) {}
@@ -26,6 +27,11 @@ export class GoalsController {
   @Get()
   list(@CurrentUser() user: any) {
     return this.service.list(user);
+  }
+
+  @Get(':id')
+  getOne(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.service.getOne(user, id);
   }
 
   @Post()
@@ -45,5 +51,28 @@ export class GoalsController {
   @Delete(':id')
   remove(@CurrentUser() user: any, @Param('id') id: string) {
     return this.service.remove(user, id);
+  }
+
+  @Post(':id/allocate')
+  allocate(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: AllocateGoalDto,
+  ) {
+    return this.service.allocate(user, id, dto);
+  }
+
+  @Post(':id/withdraw')
+  withdraw(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: WithdrawGoalDto,
+  ) {
+    return this.service.withdraw(user, id, dto);
+  }
+
+  @Get(':id/transactions')
+  getTransactionHistory(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.service.getTransactionHistory(user, id);
   }
 }

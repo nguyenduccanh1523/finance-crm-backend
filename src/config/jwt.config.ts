@@ -1,8 +1,8 @@
 export interface JwtConfig {
   accessSecret: string;
   refreshSecret: string;
-  accessExpiresIn: number;        // giây
-  refreshExpiresIn: number;       // giây
+  accessExpiresIn: number; // giây
+  refreshExpiresIn: number; // giây
 }
 
 export const jwtConfig: JwtConfig = {

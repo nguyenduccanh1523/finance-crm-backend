@@ -521,4 +521,48 @@ export class TransactionsService {
       );
     }
   }
+
+  async getLinkedToBudget(user: any, budgetId: string) {
+    const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
+
+    // Get budget transactions linked to this budget
+    const qb = this.repo
+      .getQueryBuilder()
+      .innerJoin('budget_transactions', 'bt', 'bt.transaction_id = t.id')
+      .where('bt.budget_id = :budgetId', { budgetId })
+      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('t.deleted_at IS NULL')
+      .orderBy('t.occurred_at', 'DESC');
+
+    const transactions = await qb.getMany();
+
+    return {
+      statusCode: 200,
+      message: 'Success',
+      budgetId,
+      transactions: this.transformTransactionsWithTags(transactions),
+    };
+  }
+
+  async getLinkedToGoal(user: any, goalId: string) {
+    const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
+
+    // Get goal transactions linked to this goal
+    const qb = this.repo
+      .getQueryBuilder()
+      .innerJoin('goal_transactions', 'gt', 'gt.transaction_id = t.id')
+      .where('gt.goal_id = :goalId', { goalId })
+      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('t.deleted_at IS NULL')
+      .orderBy('t.occurred_at', 'DESC');
+
+    const transactions = await qb.getMany();
+
+    return {
+      statusCode: 200,
+      message: 'Success',
+      goalId,
+      transactions: this.transformTransactionsWithTags(transactions),
+    };
+  }
 }
