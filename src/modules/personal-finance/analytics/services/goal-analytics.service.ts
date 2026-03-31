@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Goal } from '../../entities/goal.entity';
-import { Transaction } from '../../entities/transaction.entity';
+import { GoalTransaction } from '../../entities/goal-transaction.entity';
 import {
   IGoalAnalyticsService,
   GoalProgress,
@@ -19,8 +19,8 @@ import { FinancialCalculationService } from './financial-calculation.service';
 export class GoalAnalyticsService implements IGoalAnalyticsService {
   constructor(
     @InjectRepository(Goal) private goalRepo: Repository<Goal>,
-    @InjectRepository(Transaction)
-    private transactionRepo: Repository<Transaction>,
+    @InjectRepository(GoalTransaction)
+    private goalTransactionRepo: Repository<GoalTransaction>,
     private calculationService: FinancialCalculationService,
   ) {}
 
@@ -35,6 +35,10 @@ export class GoalAnalyticsService implements IGoalAnalyticsService {
     const progressList: GoalProgress[] = [];
 
     for (const goal of goals) {
+      console.log(
+        `[DEBUG] Processing goal: id=${goal.id}, name=${goal.name}, currentAmount=${goal.currentAmountCents}, targetAmount=${goal.targetAmountCents}`,
+      );
+
       // Lấy lịch sử đạt được mục tiêu
       const historicalData = await this.getGoalHistoricalData(goal);
 
@@ -163,39 +167,49 @@ export class GoalAnalyticsService implements IGoalAnalyticsService {
   }
 
   /**
-   * Lấy dữ liệu lịch sử về việc đạt mục tiêu
-   * Mô phỏng: Từ transactions gắn tag "goal" hoặc tracking updates
+   * Lấy dữ liệu lịch sử về việc allocate tiền vào mục tiêu
+   * Query từ GoalTransaction (bridge table giữa Goal và Transaction)
    */
   private async getGoalHistoricalData(
     goal: Goal,
   ): Promise<Array<{ date: Date; amount: number }>> {
-    // Giả sử có tracking goal updates trong DB
-    // Hoặc tính từ toàn bộ income timeline
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    // Query goal transactions (ALLOCATION & WITHDRAWAL)
+    const goalTransactions = await this.goalTransactionRepo
+      .createQueryBuilder('gt')
+      .leftJoinAndSelect('gt.transaction', 't')
+      .where('gt.goalId = :goalId', { goalId: goal.id })
+      .orderBy('t.occurredAt', 'ASC')
+      .getMany();
 
-    // Query để lấy income transactions (giả sử goal là tiền kiếm được)
-    // Trong thực tế, bạn có thể có bảng GoalProgress riêng
-    const result = await this.transactionRepo
-      .createQueryBuilder('t')
-      .select('DATE(t.occurredAt)', 'date')
-      .addSelect('SUM(t.amountCents)', 'total')
-      .where('t.workspaceId = :workspaceId', { workspaceId: goal.workspaceId })
-      .andWhere('t.occurredAt >= :start', { start: threeMonthsAgo })
-      .andWhere('t.type = :type', { type: 'INCOME' })
-      .groupBy('DATE(t.occurredAt)')
-      .orderBy('DATE(t.occurredAt)', 'ASC')
-      .getRawMany();
+    // Nếu không có transactions, return empty
+    if (!goalTransactions.length) {
+      return [];
+    }
+
+    // Group by date và tính cumulative
+    const dailyMap = new Map<string, number>();
+    for (const gt of goalTransactions) {
+      const dateStr = new Date(gt.transaction.occurredAt).toLocaleDateString(
+        'en-CA',
+      ); // YYYY-MM-DD format
+      const amount =
+        gt.type === 'ALLOCATION'
+          ? gt.transaction.amountCents
+          : -gt.transaction.amountCents;
+      dailyMap.set(dateStr, (dailyMap.get(dateStr) || 0) + amount);
+    }
 
     // Tính cumulative amount
     let cumulativeAmount = 0;
     const historicalData: Array<{ date: Date; amount: number }> = [];
 
-    for (const row of result) {
-      cumulativeAmount += parseInt(row.total || 0);
+    const sortedDates = Array.from(dailyMap.keys()).sort();
+    for (const dateStr of sortedDates) {
+      const dailyAmount = dailyMap.get(dateStr) || 0;
+      cumulativeAmount += dailyAmount;
       historicalData.push({
-        date: new Date(row.date),
-        amount: cumulativeAmount,
+        date: new Date(dateStr),
+        amount: Math.max(0, cumulativeAmount),
       });
     }
 
@@ -208,7 +222,18 @@ export class GoalAnalyticsService implements IGoalAnalyticsService {
     targetDate: Date,
     velocity: number,
   ): 'ON_TRACK' | 'AHEAD' | 'BEHIND' | 'COMPLETED' {
-    if (current >= target) {
+    // Ensure numbers (can be BigInt from DB)
+    const currentNum = Number(current);
+    const targetNum = Number(target);
+
+    console.log(
+      `[DEBUG] Goal Status: current=${currentNum}, target=${targetNum}, velocity=${velocity}`,
+    );
+
+    if (currentNum >= targetNum) {
+      console.log(
+        `[DEBUG] → Status = COMPLETED (${currentNum} >= ${targetNum})`,
+      );
       return 'COMPLETED';
     }
 
@@ -216,14 +241,21 @@ export class GoalAnalyticsService implements IGoalAnalyticsService {
     const daysLeft = Math.ceil(
       (targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
-    const amountNeeded = target - current;
+    const amountNeeded = targetNum - currentNum;
     const requiredVelocity = daysLeft > 0 ? amountNeeded / daysLeft : 0;
 
+    console.log(
+      `[DEBUG] daysLeft=${daysLeft}, amountNeeded=${amountNeeded}, requiredVelocity=${requiredVelocity}`,
+    );
+
     if (velocity >= requiredVelocity) {
+      console.log(`[DEBUG] → Status = AHEAD`);
       return 'AHEAD';
     } else if (velocity > 0) {
+      console.log(`[DEBUG] → Status = ON_TRACK`);
       return 'ON_TRACK';
     } else {
+      console.log(`[DEBUG] → Status = BEHIND`);
       return 'BEHIND';
     }
   }

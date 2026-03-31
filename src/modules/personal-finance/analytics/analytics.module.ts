@@ -13,6 +13,7 @@ import {
 } from './services/index';
 import { Budget } from '../entities/budget.entity';
 import { Goal } from '../entities/goal.entity';
+import { GoalTransaction } from '../entities/goal-transaction.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { Category } from '../entities/category.entity';
 import { PersonalWorkspace } from '../entities/personal-workspace.entity';
@@ -72,6 +73,7 @@ import { BillingModule } from '../../billing/billing.module';
     TypeOrmModule.forFeature([
       Budget,
       Goal,
+      GoalTransaction,
       Transaction,
       Category,
       PersonalWorkspace,
