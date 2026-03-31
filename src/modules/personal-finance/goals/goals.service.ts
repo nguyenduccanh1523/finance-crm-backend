@@ -105,7 +105,7 @@ export class GoalsService {
 
     if (accountBalance < amountToDeduct) {
       throw personalErrors.invalidInput(
-        `Số dư tài khoản (${goal.currency} ${(accountBalance / 100).toLocaleString('vi-VN')}) không đủ để phân bổ ${goal.currency} ${(amountToDeduct / 100).toLocaleString('vi-VN')}`,
+        `Số dư tài khoản (${goal.currency} ${accountBalance.toLocaleString('vi-VN')}) không đủ để phân bổ ${goal.currency} ${amountToDeduct.toLocaleString('vi-VN')}`,
       );
     }
 
@@ -172,7 +172,7 @@ export class GoalsService {
 
     if (goalBalance < amountToWithdraw) {
       throw personalErrors.invalidInput(
-        `Số dư mục tiêu (${goal.currency} ${(goalBalance / 100).toLocaleString('vi-VN')}) không đủ để rút ${goal.currency} ${(amountToWithdraw / 100).toLocaleString('vi-VN')}`,
+        `Số dư mục tiêu (${goal.currency} ${goalBalance.toLocaleString('vi-VN')}) không đủ để rút ${goal.currency} ${amountToWithdraw.toLocaleString('vi-VN')}`,
       );
     }
 
@@ -266,7 +266,7 @@ export class GoalsService {
       goalId: t.goalId,
       type: t.type,
       amountCents: Number(t.amountCents),
-      amountFormatted: `${goal.currency} ${(Number(t.amountCents) / 100).toLocaleString('vi-VN')}`,
+      amountFormatted: `${goal.currency} ${Number(t.amountCents).toLocaleString('vi-VN')}`,
       recordedAt: t.recordedAt,
       note: t.note,
     }));

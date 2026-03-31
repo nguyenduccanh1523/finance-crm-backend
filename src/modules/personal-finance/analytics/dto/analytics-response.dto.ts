@@ -68,8 +68,8 @@ export class BudgetProgressResponseDto {
     this.daysLeftInMonth = progress.daysLeftInMonth;
   }
 
-  private formatCurrency(cents: number): string {
-    return `₫${(cents / 100).toLocaleString('vi-VN')}`;
+  private formatCurrency(vnd: number): string {
+    return `₫${vnd.toLocaleString('vi-VN')}`;
   }
 
   private getStatusColor(status: string): string {
@@ -94,7 +94,7 @@ export class BudgetPredictionResponseDto {
   message: string;
 
   constructor(prediction: BudgetPrediction) {
-    this.predictedSpendFormatted = `₫${(prediction.predictedSpendCents / 100).toLocaleString('vi-VN')}`;
+    this.predictedSpendFormatted = `₫${prediction.predictedSpendCents.toLocaleString('vi-VN')}`;
     this.overagePercentage = prediction.overagePercentage;
     this.isOverBudget = prediction.isOverBudget;
     this.daysUntilOverBudget = prediction.daysUntilOverBudget;
@@ -170,7 +170,7 @@ export class GoalProgressResponseDto {
     this.isAheadSchedule = progress.isAheadSchedule;
     this.daysAheadSchedule = progress.daysAheadSchedule;
 
-    this.velocityPerDayFormatted = `₫${(progress.velocityPerDay / 100).toLocaleString('vi-VN')}/ngày`;
+    this.velocityPerDayFormatted = `₫${progress.velocityPerDay.toLocaleString('vi-VN')}/ngày`;
 
     if (progress.isAheadSchedule) {
       this.motivationalMessage = `🔥 Đang vượt tiến độ ${progress.daysAheadSchedule} ngày!`;
@@ -181,8 +181,8 @@ export class GoalProgressResponseDto {
     }
   }
 
-  private formatCurrency(cents: number): string {
-    return `₫${(cents / 100).toLocaleString('vi-VN')}`;
+  private formatCurrency(vnd: number): string {
+    return `₫${vnd.toLocaleString('vi-VN')}`;
   }
 }
 
@@ -294,10 +294,10 @@ export class ActionSuggestionResponseDto {
     }[suggestion.difficulty];
     this.category = suggestion.category;
     if (suggestion.potentialSavingsCents) {
-      this.potentialSavingsFormatted = `Tiết kiệm ₫${(suggestion.potentialSavingsCents / 100).toLocaleString('vi-VN')}`;
+      this.potentialSavingsFormatted = `Tiết kiệm ₫${suggestion.potentialSavingsCents.toLocaleString('vi-VN')}`;
     }
     if (suggestion.potentialRevenueIncCents) {
-      this.potentialRevenueIncFormatted = `Tăng doanh thu ₫${(suggestion.potentialRevenueIncCents / 100).toLocaleString('vi-VN')}`;
+      this.potentialRevenueIncFormatted = `Tăng doanh thu ₫${suggestion.potentialRevenueIncCents.toLocaleString('vi-VN')}`;
     }
   }
 }

@@ -115,9 +115,9 @@ export class AnalyticsController {
       suggestions: suggestionResponses,
       gamification: gamificationResponse,
       summary: {
-        totalBudget: `₫${(totalBudget / 100).toLocaleString('vi-VN')}`,
-        totalSpent: `₫${(totalSpent / 100).toLocaleString('vi-VN')}`,
-        buono: `₫${(buono / 100).toLocaleString('vi-VN')}`,
+        totalBudget: `₫${totalBudget.toLocaleString('vi-VN')}`,
+        totalSpent: `₫${totalSpent.toLocaleString('vi-VN')}`,
+        buono: `₫${buono.toLocaleString('vi-VN')}`,
         overallStatus,
         statusMessage: statusMessages[overallStatus],
       },
