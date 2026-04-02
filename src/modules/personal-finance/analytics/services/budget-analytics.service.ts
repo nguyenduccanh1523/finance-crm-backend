@@ -62,6 +62,7 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
       .getRepository()
       .createQueryBuilder('t')
       .where('t.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('t.accountId = :accountId', { accountId: budget.accountId })
       .andWhere('t.occurredAt >= :start AND t.occurredAt <= :end', {
         start: periodStart,
         end: periodEnd,
@@ -140,6 +141,7 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
       .getRepository()
       .createQueryBuilder('t')
       .where('t.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('t.accountId = :accountId', { accountId: budget.accountId })
       .andWhere('t.occurredAt >= :start AND t.occurredAt <= :end', {
         start: periodStart,
         end: today,
@@ -417,6 +419,7 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
       .select('DATE(t.occurredAt)', 'date')
       .addSelect('SUM(t.amountCents)', 'total')
       .where('t.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('t.accountId = :accountId', { accountId: budget.accountId })
       .andWhere('t.occurredAt >= :start', { start: startDate })
       .andWhere('t.type = :type', { type: 'EXPENSE' })
       .andWhere(budget.categoryId ? 't.categoryId = :categoryId' : '1=1', {

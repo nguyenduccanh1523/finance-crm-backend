@@ -23,6 +23,7 @@ import { CategoriesRepository } from './categories/categories.repository';
 import { TagsRepository } from './tags/tags.repository';
 import { TransactionsRepository } from './transactions/transactions.repository';
 import { BudgetsRepository } from './budgets/budgets.repository';
+import { BudgetTransactionsRepository } from './budgets/budget-transactions.repository';
 import { GoalsRepository } from './goals/goals.repository';
 import { GoalTransactionsRepository } from './goals/goal-transactions.repository';
 import { RecurringRulesRepository } from './recurring-rules/recurring-rules.repository';
@@ -59,6 +60,7 @@ import { ExchangeRateRepository } from './common/exchange-rate.repository';
     TagsRepository,
     TransactionsRepository,
     BudgetsRepository,
+    BudgetTransactionsRepository,
     GoalsRepository,
     GoalTransactionsRepository,
     RecurringRulesRepository,
@@ -71,6 +73,7 @@ import { ExchangeRateRepository } from './common/exchange-rate.repository';
     TagsRepository,
     TransactionsRepository,
     BudgetsRepository,
+    BudgetTransactionsRepository,
     GoalsRepository,
     GoalTransactionsRepository,
     RecurringRulesRepository,

@@ -15,5 +15,5 @@ export const typeOrmModuleOptions: TypeOrmModuleOptions = {
   migrations: [__dirname + '/../database/migrations/*.{ts,js}'],
 
   synchronize: false, // ❗ dùng migration, không sync
-  logging: true,
+  logging: false,
 };

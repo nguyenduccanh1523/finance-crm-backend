@@ -29,9 +29,15 @@ export class TagsRepository {
   }
 
   async findById(id: string, workspaceId: string) {
-    return this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    // Find tag that belongs to this workspace OR is global (workspaceId = null)
+    return this.repo
+      .createQueryBuilder('t')
+      .where('t.id = :id', { id })
+      .andWhere('t.deleted_at IS NULL')
+      .andWhere('(t.workspace_id = :workspaceId OR t.workspace_id IS NULL)', {
+        workspaceId,
+      })
+      .getOne();
   }
 
   async findByExcluding(

@@ -29,9 +29,15 @@ export class CategoriesRepository {
   }
 
   async findById(id: string, workspaceId: string) {
-    return this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    // Find category that belongs to this workspace OR is global (workspaceId = null)
+    return this.repo
+      .createQueryBuilder('c')
+      .where('c.id = :id', { id })
+      .andWhere('c.deleted_at IS NULL')
+      .andWhere('(c.workspace_id = :workspaceId OR c.workspace_id IS NULL)', {
+        workspaceId,
+      })
+      .getOne();
   }
 
   async findByExcluding(
