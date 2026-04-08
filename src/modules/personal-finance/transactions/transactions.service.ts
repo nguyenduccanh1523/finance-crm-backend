@@ -19,6 +19,7 @@ import { PersonalQuotaKeys } from '../common/personal.constants';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
 import { AccountsService } from '../accounts/accounts.service';
 import { BudgetTransactionsRepository } from '../budgets/budget-transactions.repository';
+import { GoalTransactionsRepository } from '../goals/goal-transactions.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -30,6 +31,7 @@ export class TransactionsService {
     private readonly policy: PersonalPlanPolicyService,
     private readonly accountsService: AccountsService,
     private readonly budgetTxRepo: BudgetTransactionsRepository,
+    private readonly goalTxRepo: GoalTransactionsRepository,
     @InjectRepository(Budget)
     private readonly budgetRepo: Repository<Budget>,
   ) {}
@@ -610,47 +612,99 @@ export class TransactionsService {
     }
   }
 
-  async getLinkedToBudget(user: any, budgetId: string) {
+  async getLinkedToBudget(
+    user: any,
+    budgetId: string,
+    q: ListTransactionsQuery,
+  ) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
-    // Get budget transactions linked to this budget
-    const qb = this.repo
-      .getQueryBuilder()
-      .innerJoin('budget_transactions', 'bt', 'bt.transaction_id = t.id')
-      .where('bt.budget_id = :budgetId', { budgetId })
-      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
-      .andWhere('t.deleted_at IS NULL')
-      .orderBy('t.occurred_at', 'DESC');
+    // Pagination defaults
+    const page = q.page || 1;
+    const limit = Math.min(q.limit || 20, 100);
+    const skip = (page - 1) * limit;
 
-    const transactions = await qb.getMany();
+    // Query budget_transactions to get linked transaction IDs
+    const [budgetTxs, total] = await this.budgetTxRepo
+      .getRepository()
+      .createQueryBuilder('bt')
+      .where('bt.budget_id = :budgetId', { budgetId })
+      .orderBy('bt.recorded_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    // Get transaction IDs
+    const txIds = budgetTxs.map((bt) => bt.transactionId);
+
+    // Get transactions with full data
+    let transactions: Transaction[] = [];
+    if (txIds.length > 0) {
+      transactions = await this.repo
+        .getQueryBuilder()
+        .where('t.id IN (:...txIds)', { txIds })
+        .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+        .andWhere('t.deleted_at IS NULL')
+        .orderBy('t.occurred_at', 'DESC')
+        .getMany();
+    }
 
     return {
       statusCode: 200,
       message: 'Success',
-      budgetId,
-      transactions: this.transformTransactionsWithTags(transactions),
+      data: this.transformTransactionsWithTags(transactions),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  async getLinkedToGoal(user: any, goalId: string) {
+  async getLinkedToGoal(user: any, goalId: string, q: ListTransactionsQuery) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
-    // Get goal transactions linked to this goal
-    const qb = this.repo
-      .getQueryBuilder()
-      .innerJoin('goal_transactions', 'gt', 'gt.transaction_id = t.id')
-      .where('gt.goal_id = :goalId', { goalId })
-      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
-      .andWhere('t.deleted_at IS NULL')
-      .orderBy('t.occurred_at', 'DESC');
+    // Pagination defaults
+    const page = q.page || 1;
+    const limit = Math.min(q.limit || 20, 100);
+    const skip = (page - 1) * limit;
 
-    const transactions = await qb.getMany();
+    // Query goal_transactions to get linked transaction IDs with pagination
+    const [goalTxs, total] = await this.goalTxRepo
+      .getRepository()
+      .createQueryBuilder('gt')
+      .where('gt.goal_id = :goalId', { goalId })
+      .orderBy('gt.recorded_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    // Get transaction IDs
+    const txIds = goalTxs.map((gt) => gt.transactionId);
+
+    // Get transactions with full data
+    let transactions: Transaction[] = [];
+    if (txIds.length > 0) {
+      transactions = await this.repo
+        .getQueryBuilder()
+        .where('t.id IN (:...txIds)', { txIds })
+        .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+        .andWhere('t.deleted_at IS NULL')
+        .orderBy('t.occurred_at', 'DESC')
+        .getMany();
+    }
 
     return {
       statusCode: 200,
       message: 'Success',
-      goalId,
-      transactions: this.transformTransactionsWithTags(transactions),
+      data: this.transformTransactionsWithTags(transactions),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

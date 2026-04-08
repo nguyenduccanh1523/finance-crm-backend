@@ -22,21 +22,19 @@ export class CategoriesService {
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
-  async list(user: any): Promise<ListCategoriesResponseDto> {
+  async list(user: any, page: number = 1, limit: number = 20): Promise<any> {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
+    const cleanLimit = Math.min(limit || 20, 100); // Max 100 per page
 
-    // Get global categories (workspaceId is null)
+    // Get global categories (workspaceId is null) - no pagination
     const globalCategories = await this.repo.findGlobalCategories();
 
-    // Get workspace categories
-    const workspaceCategories =
-      await this.repo.findWorkspaceCategories(workspaceId);
+    // Get workspace categories with pagination
+    const { items: workspaceCategories, total } =
+      await this.repo.findWorkspaceCategories(workspaceId, page, cleanLimit);
 
     // Format response
-    const formatCategory = (
-      cat: any,
-      scope: 'global' | 'workspace',
-    ): CategoryResponseDto => ({
+    const formatCategory = (cat: any, scope: 'global' | 'workspace'): any => ({
       id: cat.id,
       workspaceId: cat.workspaceId,
       name: cat.name,
@@ -50,10 +48,20 @@ export class CategoriesService {
     });
 
     return {
-      global: globalCategories.map((cat) => formatCategory(cat, 'global')),
-      workspace: workspaceCategories.map((cat) =>
-        formatCategory(cat, 'workspace'),
-      ),
+      statusCode: 200,
+      message: 'Success',
+      data: {
+        global: globalCategories.map((cat) => formatCategory(cat, 'global')),
+        workspace: workspaceCategories.map((cat) =>
+          formatCategory(cat, 'workspace'),
+        ),
+      },
+      pagination: {
+        page,
+        limit: cleanLimit,
+        total,
+        totalPages: Math.ceil(total / cleanLimit),
+      },
     };
   }
 

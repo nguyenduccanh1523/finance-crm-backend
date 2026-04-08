@@ -17,11 +17,19 @@ export class CategoriesRepository {
     });
   }
 
-  async findWorkspaceCategories(workspaceId: string) {
-    return this.repo.find({
+  async findWorkspaceCategories(
+    workspaceId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
+      skip,
+      take: limit,
     });
+    return { items, total };
   }
 
   async findOne(query: any) {

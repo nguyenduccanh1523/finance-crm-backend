@@ -21,20 +21,22 @@ export class TagsService {
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
-  async list(user: any): Promise<ListTagsResponseDto> {
+  async list(user: any, page: number = 1, limit: number = 20): Promise<any> {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
+    const cleanLimit = Math.min(limit || 20, 100); // Max 100 per page
 
-    // Get global tags (workspaceId is null)
+    // Get global tags (workspaceId is null) - no pagination
     const globalTags = await this.repo.findGlobalTags();
 
-    // Get workspace tags
-    const workspaceTags = await this.repo.findWorkspaceTags(workspaceId);
+    // Get workspace tags with pagination
+    const { items: workspaceTags, total } = await this.repo.findWorkspaceTags(
+      workspaceId,
+      page,
+      cleanLimit,
+    );
 
     // Format response
-    const formatTag = (
-      tag: any,
-      scope: 'global' | 'workspace',
-    ): TagResponseDto => ({
+    const formatTag = (tag: any, scope: 'global' | 'workspace'): any => ({
       id: tag.id,
       workspaceId: tag.workspaceId,
       name: tag.name,
@@ -45,8 +47,18 @@ export class TagsService {
     });
 
     return {
-      global: globalTags.map((tag) => formatTag(tag, 'global')),
-      workspace: workspaceTags.map((tag) => formatTag(tag, 'workspace')),
+      statusCode: 200,
+      message: 'Success',
+      data: {
+        global: globalTags.map((tag) => formatTag(tag, 'global')),
+        workspace: workspaceTags.map((tag) => formatTag(tag, 'workspace')),
+      },
+      pagination: {
+        page,
+        limit: cleanLimit,
+        total,
+        totalPages: Math.ceil(total / cleanLimit),
+      },
     };
   }
 

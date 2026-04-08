@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
@@ -13,6 +14,7 @@ import { CurrentUser } from 'src/modules/core/auth/decorators/current-user.decor
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('personal/tags')
@@ -20,8 +22,8 @@ export class TagsController {
   constructor(private readonly service: TagsService) {}
 
   @Get()
-  list(@CurrentUser() user: any) {
-    return this.service.list(user);
+  list(@CurrentUser() user: any, @Query() q: PaginationQueryDto) {
+    return this.service.list(user, q.page, q.limit);
   }
 
   @Post()

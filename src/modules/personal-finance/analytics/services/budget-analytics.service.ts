@@ -35,7 +35,11 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
    * Phân tích tiến độ tất cả budgets
    */
   async analyzeBudgetProgress(workspaceId: string): Promise<BudgetProgress[]> {
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     const progressList: BudgetProgress[] = [];
 
     for (const budget of budgets) {
@@ -210,7 +214,11 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
    */
   async detectBudgetAnomalies(workspaceId: string): Promise<Anomaly[]> {
     const anomalies: Anomaly[] = [];
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
 
     for (const budget of budgets) {
       // 1. Phát hiện spending spike
@@ -479,7 +487,11 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
    * Gợi ý tối ưu hóa ngân sách dựa trên chi tiêu thực tế
    */
   async suggestOptimization(workspaceId: string): Promise<any[]> {
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     const suggestions: any[] = [];
 
     for (const budget of budgets) {

@@ -32,7 +32,11 @@ export class GoalAnalyticsWithCurrencyService {
    */
   async analyzeGoalsWithCurrency(workspaceId: string) {
     // Bước 1: Lấy tất cả goals (đã có currency từ entity)
-    const goals = await this.goalsRepository.list(workspaceId);
+    const { items: goals } = await this.goalsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
 
     // Bước 2: Lấy progress từ service cũ (single-currency logic)
     const goalProgresses =
@@ -193,7 +197,11 @@ export class GoalAnalyticsWithCurrencyService {
    * Lấy goal progress cho một account (single currency)
    */
   async getGoalProgressForAccount(workspaceId: string, accountId: string) {
-    const goals = await this.goalsRepository.list(workspaceId);
+    const { items: goals } = await this.goalsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     const accountGoals = goals.filter((g) => g.accountId === accountId);
 
     if (accountGoals.length === 0) {

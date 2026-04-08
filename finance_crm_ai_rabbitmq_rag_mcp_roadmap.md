@@ -500,7 +500,7 @@ Lợi ích:
 
 - % đã dùng
 - amount đã dùng / còn lại
-- dự báo cuối kỳ
+- dự báo cuối kỳv
 - cảnh báo vượt budget
 - insight ngắn
 

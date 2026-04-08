@@ -68,4 +68,11 @@ export class GoalTransactionsRepository {
       where: { goalId },
     });
   }
+
+  /**
+   * Get the underlying repository for direct queries
+   */
+  getRepository(): Repository<GoalTransaction> {
+    return this.repo;
+  }
 }

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ import { CurrentUser } from 'src/modules/core/auth/decorators/current-user.decor
 import { RecurringRulesService } from './recurring-rules.service';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
 import { UpdateRecurringRuleDto } from './dto/update-recurring-rule.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 
 @UseGuards(JwtAuthGuard, FeatureGuard)
 @Controller('personal/recurring-rules')
@@ -23,8 +25,8 @@ export class RecurringRulesController {
   constructor(private readonly service: RecurringRulesService) {}
 
   @Get()
-  list(@CurrentUser() user: any) {
-    return this.service.list(user);
+  list(@CurrentUser() user: any, @Query() q: PaginationQueryDto) {
+    return this.service.list(user, q.page, q.limit);
   }
 
   @Post()

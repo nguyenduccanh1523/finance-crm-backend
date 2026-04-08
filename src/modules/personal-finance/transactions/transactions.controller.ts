@@ -25,13 +25,18 @@ export class TransactionsController {
   getLinkedToBudget(
     @CurrentUser() user: any,
     @Param('budgetId') budgetId: string,
+    @Query() q: ListTransactionsQuery,
   ) {
-    return this.service.getLinkedToBudget(user, budgetId);
+    return this.service.getLinkedToBudget(user, budgetId, q);
   }
 
   @Get('linked-to-goal/:goalId')
-  getLinkedToGoal(@CurrentUser() user: any, @Param('goalId') goalId: string) {
-    return this.service.getLinkedToGoal(user, goalId);
+  getLinkedToGoal(
+    @CurrentUser() user: any,
+    @Param('goalId') goalId: string,
+    @Query() q: ListTransactionsQuery,
+  ) {
+    return this.service.getLinkedToGoal(user, goalId, q);
   }
 
   @Get()
