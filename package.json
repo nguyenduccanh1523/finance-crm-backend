@@ -33,6 +33,9 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.24",
+    "amqplib": "^1.0.3",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.2.8",
     "cache-manager-ioredis": "^2.1.0",
@@ -47,7 +50,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^20.3.0",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
