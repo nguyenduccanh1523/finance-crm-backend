@@ -5,11 +5,16 @@ import { ConversationType } from '../../../../common/enums/business.enums';
 @Entity({ name: 'conversations' })
 export class Conversation extends BaseEntity {
   @Column({ name: 'org_id', type: 'uuid' })
-  orgId: string;
+  orgId!: string;
 
-  @Column() type: ConversationType;
+  @Column({
+    type: 'enum',
+    enum: ConversationType,
+  })
+  type!: ConversationType;
+
   @Column({ nullable: true }) title?: string;
 
   @Column({ name: 'created_by', type: 'uuid' })
-  createdBy: string;
+  createdBy!: string;
 }

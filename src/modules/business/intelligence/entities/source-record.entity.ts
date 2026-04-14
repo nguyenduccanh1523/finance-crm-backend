@@ -16,18 +16,18 @@ export class SourceRecordEntity extends BaseEntity {
   @Column({ name: 'source_type' })
   sourceType!: string;
 
-  @Column({ name: 'source_uri', nullable: true })
+  @Column({ name: 'source_uri', type: 'text', nullable: true })
   sourceUri?: string | null;
 
-  @Column({ name: 'source_ref', nullable: true })
+  @Column({ name: 'source_ref', type: 'text', nullable: true })
   sourceRef?: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   title?: string | null;
 
   @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
   content!: Record<string, any>;
 
-  @Column({ name: 'visibility_scope', nullable: true })
+  @Column({ name: 'visibility_scope', type: 'text', nullable: true })
   visibilityScope?: string | null;
 }

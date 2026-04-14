@@ -16,7 +16,7 @@ export class AssertionEntity extends BaseEntity {
   @Column({ name: 'assertion_text', type: 'text' })
   assertionText!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'severity', type: 'text', nullable: true })
   severity?: string | null;
 
   @Column({

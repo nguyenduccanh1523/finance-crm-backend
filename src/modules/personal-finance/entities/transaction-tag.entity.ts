@@ -5,14 +5,14 @@ import { Tag } from './tag.entity';
 @Entity({ name: 'transaction_tags' })
 export class TransactionTag {
   @PrimaryColumn({ name: 'transaction_id', type: 'uuid' })
-  transactionId: string;
+  transactionId!: string;
 
   @PrimaryColumn({ name: 'tag_id', type: 'uuid' })
-  tagId: string;
+  tagId!: string;
 
   @ManyToOne(() => Transaction, { onDelete: 'CASCADE' })
-  transaction: Transaction;
+  transaction!: Transaction;
 
   @ManyToOne(() => Tag, { onDelete: 'CASCADE' })
-  tag: Tag;
+  tag!: Tag;
 }

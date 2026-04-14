@@ -25,7 +25,7 @@ export class WorkflowRunEntity extends BaseEntity {
   @Column({ name: 'trigger_source' })
   triggerSource!: string;
 
-  @Column({ name: 'trigger_event', nullable: true })
+  @Column({ name: 'trigger_event', type: 'text', nullable: true })
   triggerEvent?: string | null;
 
   @Column({
@@ -48,7 +48,7 @@ export class WorkflowRunEntity extends BaseEntity {
   @Column({ default: 5 })
   priority!: number;
 
-  @Column({ name: 'idempotency_key', nullable: true })
+  @Column({ name: 'idempotency_key', type: 'text', nullable: true })
   idempotencyKey?: string | null;
 
   @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
@@ -57,7 +57,7 @@ export class WorkflowRunEntity extends BaseEntity {
   @Column({ name: 'finished_at', type: 'timestamptz', nullable: true })
   finishedAt?: Date | null;
 
-  @Column({ name: 'error_code', nullable: true })
+  @Column({ name: 'error_code', type: 'text', nullable: true })
   errorCode?: string | null;
 
   @Column({ name: 'error_message', type: 'text', nullable: true })

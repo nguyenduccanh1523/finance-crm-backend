@@ -7,49 +7,49 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { SoftDeleteEntity } from '../../../common/entities/soft-delete.entity';
-import { PersonalWorkspace } from './personal-workspace.entity';
-import { Account } from './account.entity';
-import { Category } from './category.entity';
-import { TransactionType } from '../../../common/enums/transaction-type.enum';
-import { TransactionTag } from './transaction-tag.entity';
+import type { PersonalWorkspace } from './personal-workspace.entity';
+import type { Account } from './account.entity';
+import type { Category } from './category.entity';
+import type { TransactionType } from '../../../common/enums/transaction-type.enum';
+import type { TransactionTag } from './transaction-tag.entity';
 
 @Entity({ name: 'transactions' })
 @Index(['workspaceId', 'occurredAt'])
 export class Transaction extends SoftDeleteEntity {
   @Column({ name: 'workspace_id', type: 'uuid' })
-  workspaceId: string;
+  workspaceId!: string;
 
   @JoinColumn({ name: 'workspace_id' })
-  @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
-  workspace: PersonalWorkspace;
+  @ManyToOne('PersonalWorkspace', { onDelete: 'CASCADE' })
+  workspace!: PersonalWorkspace;
 
   @Column({ name: 'account_id', type: 'uuid' })
-  accountId: string;
+  accountId!: string;
 
-  @ManyToOne(() => Account)
+  @ManyToOne('Account')
   @JoinColumn({ name: 'account_id' })
-  account: Account;
+  account!: Account;
 
-  @OneToMany(() => TransactionTag, (tt) => tt.transaction)
-  transactionTags: TransactionTag[];
+  @OneToMany('TransactionTag', 'transaction')
+  transactionTags!: TransactionTag[];
 
   @Column({ type: 'text' })
-  type: TransactionType;
+  type!: TransactionType;
 
   @Column({ name: 'amount_cents', type: 'bigint' })
-  amountCents: number;
+  amountCents!: number;
 
   @Column({ type: 'char', length: 3 })
-  currency: string;
+  currency!: string;
 
   @Index()
   @Column({ name: 'occurred_at', type: 'timestamptz' })
-  occurredAt: Date;
+  occurredAt!: Date;
 
   @Column({ name: 'category_id', type: 'uuid', nullable: true })
   categoryId?: string;
 
-  @ManyToOne(() => Category, { nullable: true })
+  @ManyToOne('Category', { nullable: true })
   @JoinColumn({ name: 'category_id' })
   category?: Category;
 

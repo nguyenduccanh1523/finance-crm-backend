@@ -60,10 +60,10 @@ export class WorkflowTaskEntity extends BaseEntity {
   })
   confidenceThreshold?: number | null;
 
-  @Column({ name: 'visibility_scope', nullable: true })
+  @Column({ name: 'visibility_scope', type: 'text', nullable: true })
   visibilityScope?: string | null;
 
-  @Column({ name: 'assigned_worker', nullable: true })
+  @Column({ name: 'assigned_worker', type: 'text', nullable: true })
   assignedWorker?: string | null;
 
   @Column({ name: 'locked_at', type: 'timestamptz', nullable: true })
@@ -78,7 +78,7 @@ export class WorkflowTaskEntity extends BaseEntity {
   @Column({ name: 'output_payload', type: 'jsonb', nullable: true })
   outputPayload?: Record<string, any> | null;
 
-  @Column({ name: 'error_code', nullable: true })
+  @Column({ name: 'error_code', type: 'text', nullable: true })
   errorCode?: string | null;
 
   @Column({ name: 'error_message', type: 'text', nullable: true })

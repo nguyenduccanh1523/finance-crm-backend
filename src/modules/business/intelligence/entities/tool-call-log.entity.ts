@@ -50,7 +50,7 @@ export class ToolCallLogEntity extends BaseEntity {
   })
   confidenceScore?: number | null;
 
-  @Column({ name: 'blocked_reason', nullable: true })
+  @Column({ name: 'blocked_reason', type: 'text', nullable: true })
   blockedReason?: string | null;
 
   @Column({ name: 'finished_at', type: 'timestamptz', nullable: true })
