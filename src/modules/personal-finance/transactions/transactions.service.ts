@@ -6,6 +6,8 @@ import { TransactionTag } from '../entities/transaction-tag.entity';
 import { Account } from '../entities/account.entity';
 import { Category } from '../entities/category.entity';
 import { Tag } from '../entities/tag.entity';
+import { Budget } from '../entities/budget.entity';
+import { BudgetTransaction } from '../entities/budget-transaction.entity';
 import { PersonalWorkspaceService } from '../workspace/personal-workspace.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -16,6 +18,10 @@ import { PersonalPlanPolicyService } from '../common/personal-plan-policy.servic
 import { PersonalQuotaKeys } from '../common/personal.constants';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
 import { AccountsService } from '../accounts/accounts.service';
+import { BudgetTransactionsRepository } from '../budgets/budget-transactions.repository';
+import { GoalTransactionsRepository } from '../goals/goal-transactions.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TransactionsService {
@@ -24,6 +30,10 @@ export class TransactionsService {
     private readonly wsService: PersonalWorkspaceService,
     private readonly policy: PersonalPlanPolicyService,
     private readonly accountsService: AccountsService,
+    private readonly budgetTxRepo: BudgetTransactionsRepository,
+    private readonly goalTxRepo: GoalTransactionsRepository,
+    @InjectRepository(Budget)
+    private readonly budgetRepo: Repository<Budget>,
   ) {}
 
   private monthRange(date: Date) {
@@ -34,6 +44,70 @@ export class TransactionsService {
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1, 0, 0, 0),
     );
     return { start, end };
+  }
+
+  /**
+   * Link transaction to budget if it's an EXPENSE transaction with a category
+   * This creates a BudgetTransaction record to track spending against budgets
+   * MUST execute within transaction context (using queryRunner.manager)
+   */
+  private async linkToBudgetIfApplicable(
+    manager: any,
+    tx: Transaction,
+    workspaceId: string,
+  ) {
+    try {
+      // Only EXPENSE transactions with categoryId should be linked to budget
+      if (tx.type !== (TransactionType.EXPENSE as any) || !tx.categoryId) {
+        return;
+      }
+
+      // Get period month in YYYY-MM-DD format (first day of the month)
+      const year = tx.occurredAt.getUTCFullYear();
+      const month = String(tx.occurredAt.getUTCMonth() + 1).padStart(2, '0');
+      const periodMonth = `${year}-${month}-01`;
+
+      // Try 1: Find budget for this specific category
+      let budget = await manager.findOne(Budget, {
+        where: {
+          workspaceId,
+          categoryId: tx.categoryId,
+          periodMonth,
+          accountId: tx.accountId,
+        },
+      });
+
+      // Try 2: If no specific budget, find budget for all categories (categoryId = NULL)
+      if (!budget) {
+        budget = await manager.findOne(Budget, {
+          where: {
+            workspaceId,
+            categoryId: null as any,
+            periodMonth,
+            accountId: tx.accountId,
+          },
+        });
+      }
+
+      if (!budget) {
+        return;
+      }
+
+      const budgetTx = manager.create(BudgetTransaction, {
+        budgetId: budget.id,
+        transactionId: tx.id,
+        amountCents: tx.amountCents,
+        recordedAt: new Date(),
+      });
+      const saved = await manager.save(budgetTx);
+    } catch (err) {
+      console.error('[linkToBudgetIfApplicable] ERROR:', {
+        message: err.message,
+        code: err.code,
+        detail: err.detail,
+        constraint: err.constraint,
+      });
+    }
   }
 
   async list(user: any, q: ListTransactionsQuery) {
@@ -151,6 +225,9 @@ export class TransactionsService {
       // apply balance effects
       await this.applyBalance(queryRunner.manager, saved, +1);
 
+      // link to budget if applicable (EXPENSE with categoryId)
+      await this.linkToBudgetIfApplicable(queryRunner.manager, saved, ws.id);
+
       // tags
       if (dto.tagIds?.length) {
         await this.replaceTags(
@@ -267,6 +344,14 @@ export class TransactionsService {
       // re-apply new balance
       await this.applyBalance(queryRunner.manager, saved, +1);
 
+      // Update budget linking: unlink old, link new if applicable
+      // First, unlink all existing budget links for this transaction (within transaction context)
+      await queryRunner.manager.delete(BudgetTransaction, {
+        transactionId: id,
+      });
+      // Then link to new budget if applicable
+      await this.linkToBudgetIfApplicable(queryRunner.manager, saved, ws.id);
+
       // tags replace
       if (dto.tagIds !== undefined) {
         await this.replaceTags(
@@ -303,6 +388,11 @@ export class TransactionsService {
 
       // revert balance
       await this.applyBalance(queryRunner.manager, existing, -1);
+
+      // unlink from budgets (within transaction context)
+      await queryRunner.manager.delete(BudgetTransaction, {
+        transactionId: id,
+      });
 
       await queryRunner.manager.softDelete(Transaction, { id });
       await queryRunner.manager.delete(TransactionTag, { transactionId: id });
@@ -522,47 +612,99 @@ export class TransactionsService {
     }
   }
 
-  async getLinkedToBudget(user: any, budgetId: string) {
+  async getLinkedToBudget(
+    user: any,
+    budgetId: string,
+    q: ListTransactionsQuery,
+  ) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
-    // Get budget transactions linked to this budget
-    const qb = this.repo
-      .getQueryBuilder()
-      .innerJoin('budget_transactions', 'bt', 'bt.transaction_id = t.id')
-      .where('bt.budget_id = :budgetId', { budgetId })
-      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
-      .andWhere('t.deleted_at IS NULL')
-      .orderBy('t.occurred_at', 'DESC');
+    // Pagination defaults
+    const page = q.page || 1;
+    const limit = Math.min(q.limit || 20, 100);
+    const skip = (page - 1) * limit;
 
-    const transactions = await qb.getMany();
+    // Query budget_transactions to get linked transaction IDs
+    const [budgetTxs, total] = await this.budgetTxRepo
+      .getRepository()
+      .createQueryBuilder('bt')
+      .where('bt.budget_id = :budgetId', { budgetId })
+      .orderBy('bt.recorded_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    // Get transaction IDs
+    const txIds = budgetTxs.map((bt) => bt.transactionId);
+
+    // Get transactions with full data
+    let transactions: Transaction[] = [];
+    if (txIds.length > 0) {
+      transactions = await this.repo
+        .getQueryBuilder()
+        .where('t.id IN (:...txIds)', { txIds })
+        .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+        .andWhere('t.deleted_at IS NULL')
+        .orderBy('t.occurred_at', 'DESC')
+        .getMany();
+    }
 
     return {
       statusCode: 200,
       message: 'Success',
-      budgetId,
-      transactions: this.transformTransactionsWithTags(transactions),
+      data: this.transformTransactionsWithTags(transactions),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  async getLinkedToGoal(user: any, goalId: string) {
+  async getLinkedToGoal(user: any, goalId: string, q: ListTransactionsQuery) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
 
-    // Get goal transactions linked to this goal
-    const qb = this.repo
-      .getQueryBuilder()
-      .innerJoin('goal_transactions', 'gt', 'gt.transaction_id = t.id')
-      .where('gt.goal_id = :goalId', { goalId })
-      .andWhere('t.workspace_id = :workspaceId', { workspaceId })
-      .andWhere('t.deleted_at IS NULL')
-      .orderBy('t.occurred_at', 'DESC');
+    // Pagination defaults
+    const page = q.page || 1;
+    const limit = Math.min(q.limit || 20, 100);
+    const skip = (page - 1) * limit;
 
-    const transactions = await qb.getMany();
+    // Query goal_transactions to get linked transaction IDs with pagination
+    const [goalTxs, total] = await this.goalTxRepo
+      .getRepository()
+      .createQueryBuilder('gt')
+      .where('gt.goal_id = :goalId', { goalId })
+      .orderBy('gt.recorded_at', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    // Get transaction IDs
+    const txIds = goalTxs.map((gt) => gt.transactionId);
+
+    // Get transactions with full data
+    let transactions: Transaction[] = [];
+    if (txIds.length > 0) {
+      transactions = await this.repo
+        .getQueryBuilder()
+        .where('t.id IN (:...txIds)', { txIds })
+        .andWhere('t.workspace_id = :workspaceId', { workspaceId })
+        .andWhere('t.deleted_at IS NULL')
+        .orderBy('t.occurred_at', 'DESC')
+        .getMany();
+    }
 
     return {
       statusCode: 200,
       message: 'Success',
-      goalId,
-      transactions: this.transformTransactionsWithTags(transactions),
+      data: this.transformTransactionsWithTags(transactions),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

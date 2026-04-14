@@ -17,11 +17,19 @@ export class TagsRepository {
     });
   }
 
-  async findWorkspaceTags(workspaceId: string) {
-    return this.repo.find({
+  async findWorkspaceTags(
+    workspaceId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { createdAt: 'DESC' as any },
+      skip,
+      take: limit,
     });
+    return { items, total };
   }
 
   async findOne(query: any) {
@@ -29,9 +37,15 @@ export class TagsRepository {
   }
 
   async findById(id: string, workspaceId: string) {
-    return this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    // Find tag that belongs to this workspace OR is global (workspaceId = null)
+    return this.repo
+      .createQueryBuilder('t')
+      .where('t.id = :id', { id })
+      .andWhere('t.deleted_at IS NULL')
+      .andWhere('(t.workspace_id = :workspaceId OR t.workspace_id IS NULL)', {
+        workspaceId,
+      })
+      .getOne();
   }
 
   async findByExcluding(

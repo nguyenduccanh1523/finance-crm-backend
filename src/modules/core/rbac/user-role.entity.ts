@@ -1,7 +1,7 @@
 import { Column, Entity, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { User } from '../users/user.entity';
-import { Role } from './role.entity';
+import type { User } from '../users/user.entity';
+import type { Role } from './role.entity';
 
 /**
  * UserRole: Liên kết User với Global Roles (SUPER_ADMIN, ADMIN, etc.)
@@ -12,23 +12,23 @@ import { Role } from './role.entity';
 @Index(['userId', 'roleId'], { unique: true })
 export class UserRole extends BaseEntity {
   @Column({ name: 'user_id', type: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @Column({ name: 'role_id', type: 'uuid' })
-  roleId: string;
+  roleId!: string;
 
   @Column({ name: 'assigned_at', type: 'timestamptz', default: () => 'NOW()' })
-  assignedAt: Date;
+  assignedAt!: Date;
 
-  @ManyToOne(() => User, (user) => user.roles, {
+  @ManyToOne('User', 'roles', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
-  @ManyToOne(() => Role, (role) => role.userRoles, {
+  @ManyToOne('Role', 'userRoles', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'role_id' })
-  role: Role;
+  role!: Role;
 }

@@ -76,9 +76,15 @@ export class TransactionsRepository {
   }
 
   async findCategory(id: string, workspaceId: string) {
-    return this.categoryRepo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    // Find category that belongs to this workspace OR is global (workspaceId = null)
+    return this.categoryRepo
+      .createQueryBuilder('c')
+      .where('c.id = :id', { id })
+      .andWhere('c.deleted_at IS NULL')
+      .andWhere('(c.workspace_id = :workspaceId OR c.workspace_id IS NULL)', {
+        workspaceId,
+      })
+      .getOne();
   }
 
   async findTag(id: string, workspaceId: string) {

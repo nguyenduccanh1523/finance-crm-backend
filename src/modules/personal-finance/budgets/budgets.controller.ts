@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ import { CurrentUser } from 'src/modules/core/auth/decorators/current-user.decor
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 
 @UseGuards(JwtAuthGuard, FeatureGuard)
 @Controller('personal/budgets')
@@ -23,8 +25,8 @@ export class BudgetsController {
   constructor(private readonly service: BudgetsService) {}
 
   @Get()
-  list(@CurrentUser() user: any) {
-    return this.service.list(user);
+  list(@CurrentUser() user: any, @Query() q: PaginationQueryDto) {
+    return this.service.list(user, q.page, q.limit);
   }
 
   @Get(':id')

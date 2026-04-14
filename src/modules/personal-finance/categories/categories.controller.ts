@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
@@ -13,6 +14,7 @@ import { CurrentUser } from 'src/modules/core/auth/decorators/current-user.decor
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('personal/categories')
@@ -20,8 +22,8 @@ export class CategoriesController {
   constructor(private readonly service: CategoriesService) {}
 
   @Get()
-  list(@CurrentUser() user: any) {
-    return this.service.list(user);
+  list(@CurrentUser() user: any, @Query() q: PaginationQueryDto) {
+    return this.service.list(user, q.page, q.limit);
   }
 
   @Post()

@@ -5,16 +5,16 @@ import { User } from '../users/user.entity';
 @Entity({ name: 'refresh_tokens' })
 export class RefreshToken extends BaseEntity {
   @Column({ name: 'user_id', type: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @ManyToOne(() => User, (user) => user.refreshTokens, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'text' })
-  token: string; // hash
+  token!: string; // hash
 
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expiresAt?: Date;

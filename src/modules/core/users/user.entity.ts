@@ -10,26 +10,26 @@ import { RefreshToken } from '../auth/refresh-token.entity';
 export class User extends BaseEntity {
   @Index({ unique: true })
   @Column({ name: 'email', type: 'text', unique: true })
-  email: string;
+  email!: string;
 
   @Column({ name: 'password_hash', type: 'text' })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Column({ name: 'full_name', type: 'text' })
-  fullName: string;
+  fullName!: string;
 
   @Column({ name: 'avatar_url', type: 'text', nullable: true })
   avatarUrl?: string;
 
   @Column({ name: 'status', type: 'smallint', default: 1 })
-  status: number; // 1 active, 0 disabled
+  status!: number; // 1 active, 0 disabled
 
   @Column({
     name: 'timezone',
     type: 'text',
     default: 'Asia/Ho_Chi_Minh',
   })
-  timezone: string;
+  timezone!: string;
 
   @Column({
     name: 'default_currency',
@@ -37,20 +37,20 @@ export class User extends BaseEntity {
     length: 3,
     default: 'VND',
   })
-  defaultCurrency: string;
+  defaultCurrency!: string;
 
-  @OneToMany(() => UserRole, (ur) => ur.user)
-  roles: UserRole[];
+  @OneToMany('UserRole', 'user')
+  roles!: UserRole[];
 
-  @OneToMany(() => Membership, (m) => m.user)
-  memberships: Membership[];
+  @OneToMany('Membership', 'user')
+  memberships!: Membership[];
 
-  @OneToMany(() => Organization, (org) => org.createdBy)
-  organizationsCreated: Organization[];
+  @OneToMany('Organization', 'createdBy')
+  organizationsCreated!: Organization[];
 
-  @OneToMany(() => AuditLog, (log) => log.actorUser)
-  auditLogs: AuditLog[];
+  @OneToMany('AuditLog', 'actorUser')
+  auditLogs!: AuditLog[];
 
-  @OneToMany(() => RefreshToken, (rt) => rt.user)
-  refreshTokens: RefreshToken[];
+  @OneToMany('RefreshToken', 'user')
+  refreshTokens!: RefreshToken[];
 }

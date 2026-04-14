@@ -16,11 +16,15 @@ export class RecurringRulesRepository {
     private readonly categoryRepo: Repository<Category>,
   ) {}
 
-  async list(workspaceId: string) {
-    return this.repo.find({
+  async list(workspaceId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { nextRunAt: 'ASC' as any },
+      skip,
+      take: limit,
     });
+    return { items, total };
   }
 
   async findOne(id: string, workspaceId: string) {

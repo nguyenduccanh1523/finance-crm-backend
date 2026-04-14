@@ -8,6 +8,8 @@ import { Tag } from './entities/tag.entity';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionTag } from './entities/transaction-tag.entity';
 import { Budget } from './entities/budget.entity';
+import { BudgetTransaction } from './entities/budget-transaction.entity';
+import { GoalTransaction } from './entities/goal-transaction.entity';
 import { Goal } from './entities/goal.entity';
 import { RecurringRule } from './entities/recurring-rule.entity';
 import { Attachment } from './entities/attachment.entity';
@@ -41,6 +43,7 @@ import { TransactionsRepository } from './transactions/transactions.repository';
 import { BudgetsService } from './budgets/budgets.service';
 import { BudgetsController } from './budgets/budgets.controller';
 import { BudgetsRepository } from './budgets/budgets.repository';
+import { BudgetTransactionsRepository } from './budgets/budget-transactions.repository';
 
 import { GoalsService } from './goals/goals.service';
 import { GoalsController } from './goals/goals.controller';
@@ -64,7 +67,9 @@ import { BillingModule } from '../billing/billing.module';
       Transaction,
       TransactionTag,
       Budget,
+      BudgetTransaction,
       Goal,
+      GoalTransaction,
       RecurringRule,
       Attachment,
     ]),
@@ -110,6 +115,7 @@ import { BillingModule } from '../billing/billing.module';
 
     BudgetsService,
     BudgetsRepository,
+    BudgetTransactionsRepository,
 
     GoalsService,
     GoalsRepository,

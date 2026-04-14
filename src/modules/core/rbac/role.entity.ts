@@ -10,7 +10,7 @@ import { UserRole } from './user-role.entity';
 @Index(['scope', 'orgId', 'name'], { unique: true })
 export class Role extends BaseEntity {
   @Column({ name: 'scope', type: 'text' })
-  scope: RoleScope; // GLOBAL | ORG
+  scope!: RoleScope; // GLOBAL | ORG
 
   @Column({ name: 'org_id', type: 'uuid', nullable: true })
   orgId?: string | null;
@@ -22,17 +22,17 @@ export class Role extends BaseEntity {
   organization?: Organization | null;
 
   @Column({ name: 'name', type: 'text' })
-  name: string; // vd: SUPER_ADMIN, ORG_ADMIN, MANAGER, STAFF
+  name!: string; // vd: SUPER_ADMIN, ORG_ADMIN, MANAGER, STAFF
 
   @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
   @OneToMany(() => RolePermission, (rp) => rp.role)
-  rolePermissions: RolePermission[];
+  rolePermissions!: RolePermission[];
 
   @OneToMany(() => Membership, (m) => m.role)
-  memberships: Membership[];
+  memberships!: Membership[];
 
   @OneToMany(() => UserRole, (ur) => ur.role)
-  userRoles: UserRole[];
+  userRoles!: UserRole[];
 }

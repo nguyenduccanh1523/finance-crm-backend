@@ -24,9 +24,26 @@ export class RecurringRulesService {
     private readonly policy: PersonalPlanPolicyService,
   ) {}
 
-  async list(user: any) {
+  async list(user: any, page: number = 1, limit: number = 20) {
     const workspaceId = await this.wsService.getWorkspaceIdByUserId(user.id);
-    return this.repo.list(workspaceId);
+    const cleanLimit = Math.min(limit || 20, 100); // Max 100 per page
+    const { items, total } = await this.repo.list(
+      workspaceId,
+      page,
+      cleanLimit,
+    );
+
+    return {
+      statusCode: 200,
+      message: 'Success',
+      data: items,
+      pagination: {
+        page,
+        limit: cleanLimit,
+        total,
+        totalPages: Math.ceil(total / cleanLimit),
+      },
+    };
   }
 
   async create(user: any, dto: CreateRecurringRuleDto) {

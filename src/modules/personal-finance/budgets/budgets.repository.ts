@@ -10,11 +10,15 @@ export class BudgetsRepository {
     private readonly repo: Repository<Budget>,
   ) {}
 
-  async list(workspaceId: string) {
-    return this.repo.find({
+  async list(workspaceId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
       where: { workspaceId },
       order: { periodMonth: 'DESC' as any },
+      skip,
+      take: limit,
     });
+    return { items, total };
   }
 
   async findOne(query: any) {

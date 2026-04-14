@@ -32,7 +32,11 @@ export class BudgetAnalyticsWithCurrencyService {
    */
   async analyzeBudgetsWithCurrency(workspaceId: string) {
     // Bước 1: Lấy tất cả budgets (đã có currency từ entity)
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
 
     // Bước 2: Lấy progress từ service cũ (single-currency logic)
     const budgetProgresses =
@@ -189,7 +193,11 @@ export class BudgetAnalyticsWithCurrencyService {
    * Lấy budget progress cho một account (single currency)
    */
   async getBudgetProgressForAccount(workspaceId: string, accountId: string) {
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     const accountBudgets = budgets.filter((b) => b.accountId === accountId);
 
     if (accountBudgets.length === 0) {

@@ -17,11 +17,19 @@ export class CategoriesRepository {
     });
   }
 
-  async findWorkspaceCategories(workspaceId: string) {
-    return this.repo.find({
+  async findWorkspaceCategories(
+    workspaceId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await this.repo.findAndCount({
       where: { workspaceId, deletedAt: IsNull() as any },
       order: { sortOrder: 'ASC' as any, createdAt: 'DESC' as any },
+      skip,
+      take: limit,
     });
+    return { items, total };
   }
 
   async findOne(query: any) {
@@ -29,9 +37,15 @@ export class CategoriesRepository {
   }
 
   async findById(id: string, workspaceId: string) {
-    return this.repo.findOne({
-      where: { id, workspaceId, deletedAt: IsNull() as any },
-    });
+    // Find category that belongs to this workspace OR is global (workspaceId = null)
+    return this.repo
+      .createQueryBuilder('c')
+      .where('c.id = :id', { id })
+      .andWhere('c.deleted_at IS NULL')
+      .andWhere('(c.workspace_id = :workspaceId OR c.workspace_id IS NULL)', {
+        workspaceId,
+      })
+      .getOne();
   }
 
   async findByExcluding(

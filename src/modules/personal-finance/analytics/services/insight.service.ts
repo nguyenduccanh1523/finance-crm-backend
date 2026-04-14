@@ -290,7 +290,11 @@ export class InsightService implements IInsightService {
     const thisMonthStart = new Date();
     thisMonthStart.setDate(1);
 
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     let totalUnderBudget = 0;
 
     for (const budget of budgets) {
@@ -330,7 +334,11 @@ export class InsightService implements IInsightService {
   private async generateOverBudgetWarning(
     workspaceId: string,
   ): Promise<Insight | null> {
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
     let overBudgetCount = 0;
     let totalOverage = 0;
 
@@ -381,7 +389,11 @@ export class InsightService implements IInsightService {
     workspaceId: string,
   ): Promise<Insight[]> {
     const warnings: Insight[] = [];
-    const budgets = await this.budgetsRepository.list(workspaceId);
+    const { items: budgets } = await this.budgetsRepository.list(
+      workspaceId,
+      1,
+      999,
+    );
 
     for (const budget of budgets) {
       const [periodStart, periodEnd] = this.getPeriodDateRange(

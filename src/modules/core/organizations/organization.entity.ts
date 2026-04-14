@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
 import { SoftDeleteEntity } from '../../../common/entities/soft-delete.entity';
 import { User } from '../users/user.entity';
 import { Membership } from '../rbac/membership.entity';
@@ -13,7 +7,7 @@ import { Role } from '../rbac/role.entity';
 @Entity({ name: 'organizations' })
 export class Organization extends SoftDeleteEntity {
   @Column({ name: 'name', type: 'text' })
-  name: string;
+  name!: string;
 
   @Column({ name: 'tax_code', type: 'text', nullable: true })
   taxCode?: string;
@@ -27,7 +21,7 @@ export class Organization extends SoftDeleteEntity {
     type: 'text',
     default: 'Asia/Ho_Chi_Minh',
   })
-  timezone: string;
+  timezone!: string;
 
   @Column({
     name: 'currency',
@@ -35,20 +29,20 @@ export class Organization extends SoftDeleteEntity {
     length: 3,
     default: 'VND',
   })
-  currency: string;
+  currency!: string;
 
   @Column({ name: 'created_by', type: 'uuid' })
-  createdById: string;
+  createdById!: string;
 
   @ManyToOne(() => User, (user) => user.organizationsCreated, {
     nullable: false,
     onDelete: 'RESTRICT',
   })
-  createdBy: User;
+  createdBy!: User;
 
   @OneToMany(() => Membership, (m) => m.organization)
-  memberships: Membership[];
+  memberships!: Membership[];
 
   @OneToMany(() => Role, (r) => r.organization)
-  roles: Role[];
+  roles!: Role[];
 }
