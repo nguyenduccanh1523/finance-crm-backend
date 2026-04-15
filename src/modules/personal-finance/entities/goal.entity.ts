@@ -16,35 +16,35 @@ import { GoalTransaction } from './goal-transaction.entity';
 @Index(['accountId'])
 export class Goal extends SoftDeleteEntity {
   @Column({ name: 'workspace_id', type: 'uuid' })
-  workspaceId: string;
+  workspaceId!: string;
 
   @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
-  workspace: PersonalWorkspace;
+  workspace!: PersonalWorkspace;
 
   @Column({ name: 'account_id', type: 'uuid' })
-  accountId: string;
+  accountId!: string;
 
   @ManyToOne(() => Account, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'account_id' })
-  account: Account;
+  account!: Account;
 
   @Column({ type: 'text' })
-  name: string;
+  name!: string;
 
   @Column({ name: 'target_amount_cents', type: 'bigint' })
-  targetAmountCents: number;
+  targetAmountCents!: number;
 
   @Column({ name: 'target_date', type: 'date' })
-  targetDate: string;
+  targetDate!: string;
 
   @Column({ name: 'current_amount_cents', type: 'bigint', default: 0 })
-  currentAmountCents: number;
+  currentAmountCents!: number;
 
   @Column({ type: 'char', length: 3 })
-  currency: string; // Lấy từ account.currency
+  currency!: string; // Lấy từ account.currency
 
   @Column({ type: 'text' })
-  status: GoalStatus;
+  status!: GoalStatus;
 
   /**
    * Transaction history for this goal
@@ -52,5 +52,5 @@ export class Goal extends SoftDeleteEntity {
    * Provides complete audit trail and enables analytics
    */
   @OneToMany(() => GoalTransaction, (gt) => gt.goal, { cascade: ['remove'] })
-  goalTransactions: GoalTransaction[];
+  goalTransactions!: GoalTransaction[];
 }
