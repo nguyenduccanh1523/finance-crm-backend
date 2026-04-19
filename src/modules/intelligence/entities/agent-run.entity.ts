@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-import { BaseEntity } from '../../../../common/entities/base.entity';
+import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity({ name: 'agent_runs' })
 export class AgentRunEntity extends BaseEntity {

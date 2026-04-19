@@ -10,6 +10,8 @@ import { BillingModule } from './modules/billing/billing.module';
 import { PersonalFinanceModule } from './modules/personal-finance/personal-finance.module';
 import { BusinessModule } from './modules/business/business.module';
 import { SeedModule } from './modules/core/seed/seed.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
+import { ArchestraMcpModule } from './modules/core/mcp/archestra-mcp.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 
@@ -34,6 +36,8 @@ import * as redisStore from 'cache-manager-ioredis';
     PersonalFinanceModule,
     BusinessModule,
     SeedModule,
+    IntelligenceModule,
+    // ArchestraMcpModule,
   ],
 })
 export class AppModule {}
