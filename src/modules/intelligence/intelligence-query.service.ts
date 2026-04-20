@@ -20,8 +20,10 @@ export class IntelligenceQueryService {
     const result = await this.mcpClient.callTool(
       'finance-core-mcp__get_monthly_summary',
       {
-        workspace_id: workspaceId,
-        month,
+        input: {
+          workspace_id: workspaceId,
+          month,
+        },
       },
     );
 
