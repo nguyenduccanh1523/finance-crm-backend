@@ -11,6 +11,8 @@ import { SourceRecordEntity } from './entities/source-record.entity';
 import { ObservationEntity } from './entities/observation.entity';
 import { AssertionEntity } from './entities/assertion.entity';
 import { SignalEntity } from './entities/signal.entity';
+import { KnowledgeDocument } from './entities/knowledge-document.entity';
+import { KnowledgeChunk } from './entities/knowledge-chunk.entity';
 
 import { IntelligenceController } from './intelligence.controller';
 // import { IntelligenceOrchestratorService } from './intelligence-orchestrator.service';
@@ -22,7 +24,10 @@ import { IntelligenceQueryService } from './intelligence-query.service';
 import { In } from 'typeorm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([]), ArchestraMcpModule],
+  imports: [
+    TypeOrmModule.forFeature([KnowledgeDocument, KnowledgeChunk]),
+    ArchestraMcpModule,
+  ],
   controllers: [IntelligenceController],
   providers: [IntelligenceQueryService],
   exports: [IntelligenceQueryService],

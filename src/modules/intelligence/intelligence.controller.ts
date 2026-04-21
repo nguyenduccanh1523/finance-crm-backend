@@ -1,5 +1,15 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Query,
+  Post,
+  Delete,
+} from '@nestjs/common';
 import { IntelligenceQueryService } from './intelligence-query.service';
+import { RagUpsertDebugDto } from './dto/rag-upsert-debug.dto';
+import { RagRelatedChunkDebugDto } from './dto/rag-related-chunks-debug.dto';
 
 @Controller('intelligence/debug')
 export class IntelligenceController {
@@ -80,6 +90,69 @@ export class IntelligenceController {
       workspaceId,
       Number(windowDays),
       Number(limit),
+    );
+  }
+
+  @Post('rag/upsert')
+  async ragUpsert(@Body() body: RagUpsertDebugDto) {
+    if (!body.workspaceId)
+      throw new BadRequestException('workspaceId is required');
+    if (!body.documents?.length)
+      throw new BadRequestException('documents is required');
+
+    return this.intelligenceQueryService.testRagUpsert(
+      body.workspaceId,
+      body.documents,
+    );
+  }
+
+  @Get('rag/retrieve')
+  async ragRetrieve(
+    @Query('workspaceId') workspaceId: string,
+    @Query('query') query: string,
+    @Query('topK') topK = '5',
+  ) {
+    if (!workspaceId) {
+      throw new BadRequestException('workspaceId is required');
+    }
+    if (!query) {
+      throw new BadRequestException('query is required');
+    }
+
+    return this.intelligenceQueryService.testRagRetrieve(
+      workspaceId,
+      query,
+      Number(topK),
+    );
+  }
+
+  @Post('rag/related-chunks')
+  async ragRelatedChunks(@Body() body: RagRelatedChunkDebugDto) {
+    if (!body.workspaceId)
+      throw new BadRequestException('workspaceId is required');
+    if (!body.chunkIds?.length)
+      throw new BadRequestException('chunkIds is required');
+
+    return this.intelligenceQueryService.testGetRelatedChunks(
+      body.workspaceId,
+      body.chunkIds,
+    );
+  }
+
+  @Delete('rag/source')
+  async deleteRagSource(
+    @Query('workspaceId') workspaceId: string,
+    @Query('sourceType') sourceType: string,
+    @Query('sourceRef') sourceRef: string,
+  ) {
+    if (!workspaceId) throw new BadRequestException('workspaceId is required');
+    if (!sourceType) throw new BadRequestException('sourceType is required');
+    if (!sourceRef) throw new BadRequestException('sourceRef is required');
+
+    return this.intelligenceQueryService.testDeleteKnowledgeBySource(
+      workspaceId,
+      sourceType,
+      sourceRef,
     );
   }
 }

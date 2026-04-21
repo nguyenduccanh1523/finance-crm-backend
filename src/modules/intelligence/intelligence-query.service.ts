@@ -62,4 +62,64 @@ export class IntelligenceQueryService {
       },
     });
   }
+
+  async testRagUpsert(
+    workspaceId: string,
+    documents: Array<{
+      source_type: string;
+      source_ref: string;
+      title?: string;
+      text: string;
+      metadata?: Record<string, any>;
+    }>,
+  ) {
+    return this.mcpClient.callTool(
+      'knowledge-rag-mcp__upsert_finance_knowledge',
+      {
+        input: {
+          workspace_id: workspaceId,
+          documents,
+        },
+      },
+    );
+  }
+
+  async testRagRetrieve(workspaceId: string, query: string, topK: number) {
+    return this.mcpClient.callTool(
+      'knowledge-rag-mcp__hybrid_retrieve_finance_knowledge',
+      {
+        input: {
+          workspace_id: workspaceId,
+          query,
+          top_k: topK,
+        },
+      },
+    );
+  }
+
+  async testGetRelatedChunks(workspaceId: string, chunkIds: string[]) {
+    return this.mcpClient.callTool('knowledge-rag-mcp__get_related_chunks', {
+      input: {
+        workspace_id: workspaceId,
+        chunk_ids: chunkIds,
+      },
+    });
+  }
+
+  async testDeleteKnowledgeBySource(
+    workspaceId: string,
+    sourceType: string,
+    sourceRef: string,
+  ) {
+    return this.mcpClient.callTool(
+      'knowledge-rag-mcp__delete_knowledge_by_source',
+      {
+        input: {
+          workspace_id: workspaceId,
+          source_type: sourceType,
+          source_ref: sourceRef,
+        },
+      },
+    );
+  }
 }
