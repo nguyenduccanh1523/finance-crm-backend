@@ -1,0 +1,132 @@
+import { Injectable } from '@nestjs/common';
+
+type KnowledgeDocument = {
+  source_type: string;
+  source_ref: string;
+  title?: string;
+  text: string;
+  metadata?: Record<string, any>;
+};
+
+@Injectable()
+export class IntelligenceNormalizerService {
+  normalizeBudgetSnapshot(workspaceId: string, budget: any): KnowledgeDocument {
+    return {
+      source_type: 'budget_snapshot',
+      source_ref: `budget-${budget.budget_id}-${budget.period_month}`,
+      title: `Budget snapshot ${budget.period_month}`,
+      text: [
+        `Budget snapshot for workspace ${workspaceId}.`,
+        `Budget id is ${budget.budget_id}.`,
+        `Account id is ${budget.account_id}.`,
+        `Period month is ${budget.period_month}.`,
+        `Category id is ${budget.category_id ?? 'none'}.`,
+        `Budget limit is ${budget.amount_limit_cents} cents.`,
+        `Spent amount is ${budget.spent_amount_cents} cents.`,
+        `Remaining amount is ${budget.remaining_amount_cents} cents.`,
+        `Overspent amount is ${budget.overspent_amount_cents} cents.`,
+        `Usage percent is ${budget.usage_percent}.`,
+        `Alert threshold percent is ${budget.alert_threshold_percent}.`,
+        `Currency is ${budget.currency}.`,
+        `Budget over status is ${budget.is_over_budget}.`,
+        `Budget alert status is ${budget.is_alert}.`,
+        `Budget health status is ${budget.status}.`,
+      ].join(' '),
+      metadata: {
+        workspace_id: workspaceId,
+        budget_id: budget.budget_id,
+        account_id: budget.account_id,
+        period_month: budget.period_month,
+        category_id: budget.category_id,
+        currency: budget.currency,
+        status: budget.status,
+      },
+    };
+  }
+
+  normalizeGoalProgress(workspaceId: string, goal: any): KnowledgeDocument {
+    return {
+      source_type: 'goal_progress',
+      source_ref: `goal-${goal.goal_id}-${goal.target_date}`,
+      title: `Goal progress ${goal.name}`,
+      text: [
+        `Goal progress for workspace ${workspaceId}.`,
+        `Goal id is ${goal.goal_id}.`,
+        `Goal name is ${goal.name}.`,
+        `Target amount is ${goal.target_amount_cents} cents.`,
+        `Current amount is ${goal.current_amount_cents} cents.`,
+        `Remaining amount is ${goal.remaining_amount_cents} cents.`,
+        `Progress percent is ${goal.progress_percent}.`,
+        `Target date is ${goal.target_date}.`,
+        `Goal status is ${goal.status}.`,
+        `Goal completed is ${goal.is_completed}.`,
+        `Currency is ${goal.currency}.`,
+      ].join(' '),
+      metadata: {
+        workspace_id: workspaceId,
+        goal_id: goal.goal_id,
+        account_id: goal.account_id,
+        target_date: goal.target_date,
+        status: goal.status,
+        currency: goal.currency,
+      },
+    };
+  }
+
+  normalizeMonthlySummary(
+    workspaceId: string,
+    summary: any,
+  ): KnowledgeDocument {
+    return {
+      source_type: 'monthly_summary',
+      source_ref: `summary-${summary.month}`,
+      title: `Monthly finance summary ${summary.month}`,
+      text: [
+        `Monthly finance summary for workspace ${workspaceId}.`,
+        `Month is ${summary.month}.`,
+        `Income total is ${summary.income_total_cents} cents.`,
+        `Expense total is ${summary.expense_total_cents} cents.`,
+        `Net cashflow is ${summary.net_cashflow_cents} cents.`,
+        `Transaction count is ${summary.transaction_count}.`,
+        `Top categories are ${JSON.stringify(summary.top_categories ?? [])}.`,
+      ].join(' '),
+      metadata: {
+        workspace_id: workspaceId,
+        month: summary.month,
+        income_total_cents: summary.income_total_cents,
+        expense_total_cents: summary.expense_total_cents,
+        net_cashflow_cents: summary.net_cashflow_cents,
+        transaction_count: summary.transaction_count,
+      },
+    };
+  }
+
+  normalizeTransactions(
+    workspaceId: string,
+    transactionResult: any,
+    windowDays: number,
+  ): KnowledgeDocument {
+    const items = transactionResult?.items ?? [];
+
+    return {
+      source_type: 'transaction_window',
+      source_ref: `transactions-${windowDays}d-${items.length}`,
+      title: `Transactions window ${windowDays} days`,
+      text: [
+        `Transaction summary for workspace ${workspaceId} over last ${windowDays} days.`,
+        `Total transactions returned: ${items.length}.`,
+        ...items
+          .slice(0, 20)
+          .map(
+            (item: any, index: number) =>
+              `Transaction ${index + 1}: type ${item.type}, amount ${item.amount_cents} cents, category ${item.category_id ?? 'none'}, occurred at ${item.occurred_at}, note ${item.note ?? 'none'}, counterparty ${item.counterparty ?? 'none'}.`,
+          ),
+      ].join(' '),
+      metadata: {
+        workspace_id: workspaceId,
+        window_days: windowDays,
+        transaction_count: items.length,
+      },
+    };
+  }
+}

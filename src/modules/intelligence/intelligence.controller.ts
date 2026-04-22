@@ -10,11 +10,14 @@ import {
 import { IntelligenceQueryService } from './intelligence-query.service';
 import { RagUpsertDebugDto } from './dto/rag-upsert-debug.dto';
 import { RagRelatedChunkDebugDto } from './dto/rag-related-chunks-debug.dto';
+import { IntelligenceRagPipelineService } from './intelligence-rag-pipline.service';
+import { FinanceRagSyncDto } from './dto/finance-rag-sync.dto';
 
 @Controller('intelligence/debug')
 export class IntelligenceController {
   constructor(
     private readonly intelligenceQueryService: IntelligenceQueryService,
+    private readonly intelligenceRagPipelineService: IntelligenceRagPipelineService,
   ) {}
 
   @Get('mcp-tools')
@@ -154,5 +157,14 @@ export class IntelligenceController {
       sourceType,
       sourceRef,
     );
+  }
+
+  @Post('rag/sync-finance')
+  async syncFinanceRag(@Body() body: FinanceRagSyncDto) {
+    if (!body.workspaceId)
+      throw new BadRequestException('workspaceId is required');
+    if (!body.budgetId) throw new BadRequestException('budgetId is required');
+
+    return this.intelligenceRagPipelineService.syncFinanceIntoRag(body);
   }
 }
