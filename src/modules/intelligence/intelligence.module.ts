@@ -22,6 +22,7 @@ import { IntelligenceController } from './intelligence.controller';
 // import { GuardrailPolicyService } from './guardrail-policy.service';
 import { IntelligenceQueryService } from './intelligence-query.service';
 import { IntelligenceNormalizerService } from './intelligence-normalizer.service';
+import { IntelligenceRagPipelineService } from './intelligence-rag-pipline.service';
 import { In } from 'typeorm';
 
 @Module({
@@ -30,7 +31,15 @@ import { In } from 'typeorm';
     ArchestraMcpModule,
   ],
   controllers: [IntelligenceController],
-  providers: [IntelligenceQueryService, IntelligenceNormalizerService],
-  exports: [IntelligenceQueryService, IntelligenceNormalizerService],
+  providers: [
+    IntelligenceQueryService,
+    IntelligenceNormalizerService,
+    IntelligenceRagPipelineService,
+  ],
+  exports: [
+    IntelligenceQueryService,
+    IntelligenceNormalizerService,
+    IntelligenceRagPipelineService,
+  ],
 })
 export class IntelligenceModule {}

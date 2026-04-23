@@ -8,6 +8,18 @@ type KnowledgeDocument = {
   metadata?: Record<string, any>;
 };
 
+type TransactionItem = {
+  account_id: string;
+  transaction_id: string;
+  type: string;
+  amount_cents: number;
+  currency: string;
+  category_id: string | null;
+  occurred_at?: string;
+  note?: string;
+  counterparty?: string;
+};
+
 @Injectable()
 export class IntelligenceNormalizerService {
   normalizeBudgetSnapshot(workspaceId: string, budget: any): KnowledgeDocument {
@@ -76,57 +88,78 @@ export class IntelligenceNormalizerService {
   normalizeMonthlySummary(
     workspaceId: string,
     summary: any,
-  ): KnowledgeDocument {
-    return {
+  ): KnowledgeDocument[] {
+    const summaries = summary?.summaries ?? [];
+
+    return summaries.map((item: any) => ({
       source_type: 'monthly_summary',
-      source_ref: `summary-${summary.month}`,
-      title: `Monthly finance summary ${summary.month}`,
+      source_ref: `summary-${summary.month}-${item.currency}`,
+      title: `Monthly finance summary ${summary.month} ${item.currency}`,
       text: [
         `Monthly finance summary for workspace ${workspaceId}.`,
         `Month is ${summary.month}.`,
-        `Income total is ${summary.income_total_cents} cents.`,
-        `Expense total is ${summary.expense_total_cents} cents.`,
-        `Net cashflow is ${summary.net_cashflow_cents} cents.`,
-        `Transaction count is ${summary.transaction_count}.`,
-        `Top categories are ${JSON.stringify(summary.top_categories ?? [])}.`,
+        `Currency is ${item.currency}.`,
+        `Income total is ${item.income_total_cents} cents.`,
+        `Expense total is ${item.expense_total_cents} cents.`,
+        `Net cashflow is ${item.net_cashflow_cents} cents.`,
+        `Transaction count is ${item.transaction_count}.`,
+        `Top categories are ${JSON.stringify(item.top_categories ?? [])}.`,
       ].join(' '),
       metadata: {
         workspace_id: workspaceId,
         month: summary.month,
-        income_total_cents: summary.income_total_cents,
-        expense_total_cents: summary.expense_total_cents,
-        net_cashflow_cents: summary.net_cashflow_cents,
-        transaction_count: summary.transaction_count,
+        currency: item.currency,
+        income_total_cents: item.income_total_cents,
+        expense_total_cents: item.expense_total_cents,
+        net_cashflow_cents: item.net_cashflow_cents,
+        transaction_count: item.transaction_count,
       },
-    };
+    }));
   }
 
   normalizeTransactions(
     workspaceId: string,
     transactionResult: any,
     windowDays: number,
-  ): KnowledgeDocument {
-    const items = transactionResult?.items ?? [];
+  ): KnowledgeDocument[] {
+    const items: TransactionItem[] = transactionResult?.items ?? [];
 
-    return {
+    const groupedByCurrency: Record<string, TransactionItem[]> = items.reduce(
+      (acc, item) => {
+        const currency = item.currency ?? 'UNKNOWN';
+        if (!acc[currency]) acc[currency] = [];
+        acc[currency].push(item);
+        return acc;
+      },
+      {} as Record<string, TransactionItem[]>,
+    );
+
+    return (
+      Object.entries(groupedByCurrency) as [string, TransactionItem[]][]
+    ).map(([currency, currencyItems]) => ({
       source_type: 'transaction_window',
-      source_ref: `transactions-${windowDays}d-${items.length}`,
-      title: `Transactions window ${windowDays} days`,
+      source_ref: `transactions-${windowDays}d-${currency}-${currencyItems.length}`,
+      title: `Transactions window ${windowDays} days ${currency}`,
       text: [
         `Transaction summary for workspace ${workspaceId} over last ${windowDays} days.`,
-        `Total transactions returned: ${items.length}.`,
-        ...items
+        `Currency is ${currency}.`,
+        `Total transactions returned: ${currencyItems.length}.`,
+        ...currencyItems
           .slice(0, 20)
           .map(
             (item: any, index: number) =>
-              `Transaction ${index + 1}: type ${item.type}, amount ${item.amount_cents} cents, category ${item.category_id ?? 'none'}, occurred at ${item.occurred_at}, note ${item.note ?? 'none'}, counterparty ${item.counterparty ?? 'none'}.`,
+              `Transaction ${index + 1}: account ${item.account_id}, type ${item.type}, amount ${item.amount_cents} cents, category ${item.category_id ?? 'none'}, occurred at ${item.occurred_at}, note ${item.note ?? 'none'}, counterparty ${item.counterparty ?? 'none'}.`,
           ),
       ].join(' '),
       metadata: {
         workspace_id: workspaceId,
         window_days: windowDays,
-        transaction_count: items.length,
+        currency,
+        transaction_count: currencyItems.length,
+        account_ids: [
+          ...new Set(currencyItems.map((item: any) => item.account_id)),
+        ],
       },
-    };
+    }));
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { IntelligenceNormalizerService } from './intelligence-normalizer.service';
 import { IntelligenceQueryService } from './intelligence-query.service';
 
@@ -8,6 +8,31 @@ export class IntelligenceRagPipelineService {
     private readonly intelligenceNormalizerService: IntelligenceNormalizerService,
     private readonly intelligenceQueryService: IntelligenceQueryService,
   ) {}
+
+  private unwrapMcpResult(result: any, toolName: string) {
+    if (result?.isError) {
+      const message =
+        result?.content?.[0]?.text ?? `MCP tool ${toolName} failed`;
+      throw new BadRequestException(message);
+    }
+
+    if (result?.structuredContent) {
+      return result.structuredContent;
+    }
+
+    const text = result?.content?.[0]?.text;
+    if (!text) {
+      throw new BadRequestException(`MCP tool ${toolName} returned no content`);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new BadRequestException(
+        `MCP tool ${toolName} returned invalid JSON: ${text}`,
+      );
+    }
+  }
 
   async syncFinanceIntoRag(input: {
     workspaceId: string;
@@ -28,16 +53,12 @@ export class IntelligenceRagPipelineService {
       metadata?: Record<string, any>;
     }> = [];
 
-    let budgetResult: any = null;
-    let goalResult: any = null;
-    let monthlySummaryResult: any = null;
-    let transactionsResult: any = null;
-
     if (input.budgetId) {
-      budgetResult = await this.intelligenceQueryService.testGetBudgetSnapshot(
-        input.workspaceId,
-        input.budgetId,
-      );
+      const budgetResult =
+        await this.intelligenceQueryService.testGetBudgetSnapshot(
+          input.workspaceId,
+          input.budgetId,
+        );
 
       const budgetData =
         budgetResult?.structuredContent ??
@@ -52,10 +73,11 @@ export class IntelligenceRagPipelineService {
     }
 
     if (input.goalId) {
-      goalResult = await this.intelligenceQueryService.testGetGoalProgress(
-        input.workspaceId,
-        input.goalId,
-      );
+      const goalResult =
+        await this.intelligenceQueryService.testGetGoalProgress(
+          input.workspaceId,
+          input.goalId,
+        );
 
       const goalData =
         goalResult?.structuredContent ??
@@ -69,36 +91,38 @@ export class IntelligenceRagPipelineService {
       );
     }
 
-    monthlySummaryResult =
+    const monthlySummaryResult =
       await this.intelligenceQueryService.testGetMonthlySummary(
         input.workspaceId,
         input.month,
       );
 
-    const monthlySummaryData =
-      monthlySummaryResult?.structuredContent ??
-      JSON.parse(monthlySummaryResult?.content?.[0]?.text ?? '{}');
+    const monthlySummaryData = this.unwrapMcpResult(
+      monthlySummaryResult,
+      'get_monthly_summary',
+    );
 
     documents.push(
-      this.intelligenceNormalizerService.normalizeMonthlySummary(
+      ...this.intelligenceNormalizerService.normalizeMonthlySummary(
         input.workspaceId,
         monthlySummaryData,
       ),
     );
 
-    transactionsResult =
+    const transactionsResult =
       await this.intelligenceQueryService.testSearchTransactions(
         input.workspaceId,
         transactionWindowDays,
         transactionLimit,
       );
 
-    const transactionsData =
-      transactionsResult?.structuredContent ??
-      JSON.parse(transactionsResult?.content?.[0]?.text ?? '{}');
+    const transactionsData = this.unwrapMcpResult(
+      transactionsResult,
+      'search_transactions',
+    );
 
     documents.push(
-      this.intelligenceNormalizerService.normalizeTransactions(
+      ...this.intelligenceNormalizerService.normalizeTransactions(
         input.workspaceId,
         transactionsData,
         transactionWindowDays,

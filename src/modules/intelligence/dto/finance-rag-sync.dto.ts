@@ -2,7 +2,6 @@ import { IsEmpty, IsNumber, IsString } from 'class-validator';
 
 export class FinanceRagSyncDto {
   @IsString()
-  @IsEmpty()
   workspaceId!: string;
 
   @IsString()
