@@ -122,7 +122,11 @@ export class IntelligenceNormalizerService {
     transactionResult: any,
     windowDays: number,
   ): KnowledgeDocument[] {
-    const items: TransactionItem[] = transactionResult?.items ?? [];
+    const allowedTypes = new Set(['INCOME', 'EXPENSE', 'TRANSFER']);
+
+    const items: TransactionItem[] = (transactionResult?.items ?? []).filter(
+      (item: TransactionItem) => allowedTypes.has(item.type ?? ''),
+    );
 
     const groupedByCurrency: Record<string, TransactionItem[]> = items.reduce(
       (acc, item) => {
@@ -137,12 +141,13 @@ export class IntelligenceNormalizerService {
     return (
       Object.entries(groupedByCurrency) as [string, TransactionItem[]][]
     ).map(([currency, currencyItems]) => ({
-      source_type: 'transaction_window',
-      source_ref: `transactions-${windowDays}d-${currency}-${currencyItems.length}`,
-      title: `Transactions window ${windowDays} days ${currency}`,
+      source_type: 'cash_transaction_window',
+      source_ref: `cash-transactions-${windowDays}d-${currency}`,
+      title: `Cash Transactions window ${windowDays} days ${currency}`,
       text: [
-        `Transaction summary for workspace ${workspaceId} over last ${windowDays} days.`,
+        `Cash transaction summary for workspace ${workspaceId} over last ${windowDays} days.`,
         `Currency is ${currency}.`,
+        `Included transaction types are INCOME, EXPENSE and TRANSFER.`,
         `Total transactions returned: ${currencyItems.length}.`,
         ...currencyItems
           .slice(0, 20)
@@ -156,6 +161,7 @@ export class IntelligenceNormalizerService {
         window_days: windowDays,
         currency,
         transaction_count: currencyItems.length,
+        included_types: ['INCOME', 'EXPENSE', 'TRANSFER'],
         account_ids: [
           ...new Set(currencyItems.map((item: any) => item.account_id)),
         ],
