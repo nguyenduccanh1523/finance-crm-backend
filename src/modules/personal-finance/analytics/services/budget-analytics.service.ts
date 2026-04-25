@@ -88,10 +88,8 @@ export class BudgetAnalyticsService implements IBudgetAnalyticsService {
       budget.alertThresholdPercent,
     );
 
-    // Tính ngày còn lại
-    const daysLeftInMonth = this.calculationService.getDaysLeftInMonth(
-      new Date(budget.periodMonth),
-    );
+    // Tính ngày còn lại trong tháng (từ hôm nay)
+    const daysLeftInMonth = this.calculationService.getDaysLeftInMonth();
 
     // Lấy tên category nếu có categoryId
     let categoryName: string | undefined;

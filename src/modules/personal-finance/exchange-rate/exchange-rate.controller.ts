@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ExchangeRateService } from './exchange-rate.service';
 import { GetPairRateDto } from './dto/get-pair-rate.dto';
 import { ConvertCurrencyDto } from './dto/convert-currency.dto';
 import { GetCurrenciesDto } from './dto/get-currencies.dto';
+import { JwtAuthGuard } from 'src/modules/core/auth/guards/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('personal-finance/exchange-rate')
 export class ExchangeRateController {
   constructor(private readonly exchangeRateService: ExchangeRateService) {}
