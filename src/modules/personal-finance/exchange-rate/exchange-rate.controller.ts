@@ -33,4 +33,9 @@ export class ExchangeRateController {
   async getCurrencies(@Query() query: GetCurrenciesDto) {
     return this.exchangeRateService.getCurrencies(query.scope);
   }
+
+  @Get('providers')
+  async getProviders() {
+    return this.exchangeRateService.getProviders();
+  }
 }

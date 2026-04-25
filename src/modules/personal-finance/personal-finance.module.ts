@@ -56,6 +56,8 @@ import { RecurringRulesRepository } from './recurring-rules/recurring-rules.repo
 import { RepositoriesModule } from './repositories.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from '../billing/billing.module';
+import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
+import { ExchangeRate } from './entities/exchange-rate.entity';
 
 @Module({
   imports: [
@@ -72,10 +74,12 @@ import { BillingModule } from '../billing/billing.module';
       GoalTransaction,
       RecurringRule,
       Attachment,
+      ExchangeRate,
     ]),
     BillingModule,
     RepositoriesModule,
     AnalyticsModule,
+    ExchangeRateModule,
   ],
   controllers: [
     PersonalWorkspaceController,

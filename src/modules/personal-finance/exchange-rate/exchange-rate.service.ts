@@ -176,10 +176,41 @@ export class ExchangeRateService {
             return { code, value };
           });
 
-      return { items };
+      return items;
     } catch (error: any) {
       const providerMessage =
         error?.response?.data?.message || 'Failed to fetch currencies';
+
+      throw new BadGatewayException(providerMessage);
+    }
+  }
+
+  async getProviders() {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.apiBaseUrl}/providers`),
+      );
+
+      const raw = response.data;
+
+      const items = Array.isArray(raw)
+        ? raw
+        : Object.entries(raw || {}).map(([code, value]) => {
+            if (typeof value === 'string') {
+              return { code, name: value };
+            }
+
+            if (value && typeof value === 'object') {
+              return { code, ...(value as Record<string, unknown>) };
+            }
+
+            return { code, value };
+          });
+
+      return items;
+    } catch (error: any) {
+      const providerMessage =
+        error?.response?.data?.message || 'Failed to fetch providers';
 
       throw new BadGatewayException(providerMessage);
     }

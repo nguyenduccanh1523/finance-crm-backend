@@ -8,12 +8,10 @@ import { ExchangeRateService } from './exchange-rate.service';
     HttpModule.register({
       timeout: 5000,
       maxRedirects: 3,
-    })
+    }),
   ],
   controllers: [ExchangeRateController],
   providers: [ExchangeRateService],
   exports: [ExchangeRateService],
-
 })
-
 export class ExchangeRateModule {}
