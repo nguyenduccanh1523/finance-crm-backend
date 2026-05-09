@@ -39,7 +39,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.24",
-    "amqplib": "^1.0.3",
+    "amqplib": "^1.0.7",
     "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.2.8",

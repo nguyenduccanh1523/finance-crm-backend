@@ -3450,12 +3450,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"amqplib@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "amqplib@npm:1.0.3"
+"amqplib@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "amqplib@npm:1.0.7"
   dependencies:
     buffer-more-ints: "npm:~1.0.0"
-  checksum: 10c0/0a61edff9192d545ac26f191d528cc92204e97e6fa02bb5fa38c18e4b6053c8ebd7fdfead1ab0087589e7847c6676a644fa40c5079269e081dc83f1d4a8cd6de
+  checksum: 10c0/6d283fd20b05f53db151b883bb038c4086ad42cb637462f02667bcba46cfb2c39b0cc926eeb7c745cd36eeae78767877a01d601ddef560b14c9aeb97e0c5ddbb
   languageName: node
   linkType: hard
 
@@ -5749,7 +5749,7 @@ __metadata:
     "@types/passport-jwt": "npm:^4"
     "@types/pg": "npm:^8"
     "@types/supertest": "npm:^6.0.2"
-    amqplib: "npm:^1.0.3"
+    amqplib: "npm:^1.0.7"
     axios: "npm:^1.15.2"
     bcrypt: "npm:^6.0.0"
     cache-manager: "npm:^7.2.8"
