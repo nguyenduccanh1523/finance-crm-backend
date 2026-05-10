@@ -78,11 +78,20 @@ export class FinancialCalculationService implements IFinancialCalculationService
   }
 
   /**
-   * Tính số ngày còn lại trong tháng
+   * Tính số ngày còn lại trong tháng (từ hôm nay đến cuối tháng)
+   * @param date - Chỉ dùng để lấy tháng/năm nếu cần, mặc định lấy hôm nay
    */
   getDaysLeftInMonth(date: Date = new Date()): number {
-    const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    const today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastDayOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+    );
+    lastDayOfMonth.setHours(23, 59, 59, 999);
+
     return Math.ceil(
       (lastDayOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );

@@ -11,6 +11,8 @@ import { SourceRecordEntity } from './entities/source-record.entity';
 import { ObservationEntity } from './entities/observation.entity';
 import { AssertionEntity } from './entities/assertion.entity';
 import { SignalEntity } from './entities/signal.entity';
+import { KnowledgeDocument } from './entities/knowledge-document.entity';
+import { KnowledgeChunk } from './entities/knowledge-chunk.entity';
 
 import { IntelligenceController } from './intelligence.controller';
 // import { IntelligenceOrchestratorService } from './intelligence-orchestrator.service';
@@ -19,12 +21,25 @@ import { IntelligenceController } from './intelligence.controller';
 // import { ScoringService } from './scoring.service';
 // import { GuardrailPolicyService } from './guardrail-policy.service';
 import { IntelligenceQueryService } from './intelligence-query.service';
+import { IntelligenceNormalizerService } from './intelligence-normalizer.service';
+import { IntelligenceRagPipelineService } from './intelligence-rag-pipline.service';
 import { In } from 'typeorm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([]), ArchestraMcpModule],
+  imports: [
+    TypeOrmModule.forFeature([KnowledgeDocument, KnowledgeChunk]),
+    ArchestraMcpModule,
+  ],
   controllers: [IntelligenceController],
-  providers: [IntelligenceQueryService],
-  exports: [IntelligenceQueryService],
+  providers: [
+    IntelligenceQueryService,
+    IntelligenceNormalizerService,
+    IntelligenceRagPipelineService,
+  ],
+  exports: [
+    IntelligenceQueryService,
+    IntelligenceNormalizerService,
+    IntelligenceRagPipelineService,
+  ],
 })
 export class IntelligenceModule {}

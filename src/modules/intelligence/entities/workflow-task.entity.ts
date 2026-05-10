@@ -1,25 +1,65 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 
 import { BaseEntity } from '../../../common/entities/base.entity';
+import {
+  AgentName,
+  WorkflowTaskStatus,
+  WorkflowTaskType,
+} from '../workflow/workflow.enums';
+import { WorkflowRunEntity } from './workflow-run.entity';
+import { AgentRunEntity } from './agent-run.entity';
 
+@Index('idx_workflow_tasks_run_id', ['workflowRunId'])
+@Index('idx_workflow_tasks_run_order', ['workflowRunId', 'taskOrder'])
+@Index('idx_workflow_tasks_status', ['status'])
+@Index('idx_workflow_tasks_queue_status', ['queueName', 'status'])
 @Entity({ name: 'workflow_tasks' })
 export class WorkflowTaskEntity extends BaseEntity {
   @Column({ name: 'workflow_run_id', type: 'uuid' })
   workflowRunId!: string;
 
+  @ManyToOne(() => WorkflowRunEntity, (run) => run.tasks, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'workflow_run_id' })
+  workflowRun!: WorkflowRunEntity;
+
   @Column({ name: 'task_order', type: 'int' })
   taskOrder!: number;
 
-  @Column({ name: 'task_type' })
-  taskType!: string;
+  @Column({
+    name: 'task_type',
+    type: 'varchar',
+    length: 100,
+  })
+  taskType!: WorkflowTaskType;
 
-  @Column({ name: 'agent_name' })
-  agentName!: string;
+  @Column({
+    name: 'agent_name',
+    type: 'varchar',
+    length: 100,
+  })
+  agentName!: AgentName;
 
-  @Column({ name: 'queue_name' })
+  @Column({
+    name: 'queue_name',
+    type: 'varchar',
+    length: 150,
+  })
   queueName!: string;
 
-  @Column({ name: 'routing_key' })
+  @Column({
+    name: 'routing_key',
+    type: 'varchar',
+    length: 150,
+  })
   routingKey!: string;
 
   @Column({
@@ -36,16 +76,26 @@ export class WorkflowTaskEntity extends BaseEntity {
   })
   inputPayload!: Record<string, any>;
 
-  @Column()
-  status!: string;
+  @Column({
+    name: 'output_payload',
+    type: 'jsonb',
+    nullable: true,
+  })
+  outputPayload?: Record<string, any> | null;
 
-  @Column({ name: 'attempt_count', default: 0 })
+  @Column({
+    type: 'varchar',
+    length: 50,
+  })
+  status!: WorkflowTaskStatus;
+
+  @Column({ name: 'attempt_count', type: 'int', default: 0 })
   attemptCount!: number;
 
-  @Column({ name: 'max_attempts', default: 3 })
+  @Column({ name: 'max_attempts', type: 'int', default: 3 })
   maxAttempts!: number;
 
-  @Column({ name: 'timeout_seconds', default: 60 })
+  @Column({ name: 'timeout_seconds', type: 'int', default: 60 })
   timeoutSeconds!: number;
 
   @Column({ name: 'cost_budget_cents', type: 'int', nullable: true })
@@ -53,9 +103,7 @@ export class WorkflowTaskEntity extends BaseEntity {
 
   @Column({
     name: 'confidence_threshold',
-    type: 'numeric',
-    precision: 5,
-    scale: 4,
+    type: 'double precision',
     nullable: true,
   })
   confidenceThreshold?: number | null;
@@ -75,12 +123,12 @@ export class WorkflowTaskEntity extends BaseEntity {
   @Column({ name: 'finished_at', type: 'timestamptz', nullable: true })
   finishedAt?: Date | null;
 
-  @Column({ name: 'output_payload', type: 'jsonb', nullable: true })
-  outputPayload?: Record<string, any> | null;
-
   @Column({ name: 'error_code', type: 'text', nullable: true })
   errorCode?: string | null;
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage?: string | null;
+
+  @OneToMany(() => AgentRunEntity, (agentRun) => agentRun.workflowTask)
+  agentRuns!: AgentRunEntity[];
 }

@@ -6,19 +6,19 @@ import { PersonalWorkspace } from './personal-workspace.entity';
 @Index(['workspaceId', 'fromCurrency', 'toCurrency'], { unique: true })
 export class ExchangeRate extends BaseEntity {
   @Column({ name: 'workspace_id', type: 'uuid' })
-  workspaceId: string;
+  workspaceId!: string;
 
   @ManyToOne(() => PersonalWorkspace, { onDelete: 'CASCADE' })
-  workspace: PersonalWorkspace;
+  workspace!: PersonalWorkspace;
 
   @Column({ name: 'from_currency', type: 'char', length: 3 })
-  fromCurrency: string; // VND, USD, EUR
+  fromCurrency!: string; // VND, USD, EUR
 
   @Column({ name: 'to_currency', type: 'char', length: 3 })
-  toCurrency: string; // VND, USD, EUR
+  toCurrency!: string; // VND, USD, EUR
 
   @Column({ name: 'rate', type: 'numeric', precision: 18, scale: 8 })
-  rate: number; // 1 USD = 24500 VND
+  rate!: number; // 1 USD = 24500 VND
 
   /**
    * Base workspace currency (tham chiếu cho tất cả tính toán)
@@ -26,5 +26,5 @@ export class ExchangeRate extends BaseEntity {
    * Thì tất cả budget/goal đều theo VND
    */
   @Column({ name: 'base_currency', type: 'char', length: 3, default: 'VND' })
-  baseCurrency: string;
+  baseCurrency!: string;
 }

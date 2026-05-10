@@ -12,7 +12,9 @@ import type { Account } from './account.entity';
 import type { BudgetTransaction } from './budget-transaction.entity';
 
 @Entity({ name: 'budgets' })
-@Index(['workspaceId', 'periodMonth', 'categoryId'], { unique: true })
+@Index(['workspaceId', 'accountId', 'periodMonth', 'categoryId'], {
+  unique: true,
+})
 @Index(['accountId'])
 export class Budget extends BaseEntity {
   @Column({ name: 'workspace_id', type: 'uuid' })

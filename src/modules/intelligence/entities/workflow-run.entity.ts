@@ -1,17 +1,43 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
 
 import { BaseEntity } from '../../../common/entities/base.entity';
+import {
+  WorkflowName,
+  WorkflowRunStatus,
+  WorkflowScopeType,
+  WorkflowTriggerSource,
+  WorkflowVersion,
+} from '../workflow/workflow.enums';
+import { WorkflowTaskEntity } from './workflow-task.entity';
+import { AgentRunEntity } from './agent-run.entity';
 
+@Index('idx_workflow_runs_status', ['status'])
+@Index('idx_workflow_runs_workspace_status', ['workspaceId', 'status'])
+@Index('idx_workflow_runs_org_status', ['orgId', 'status'])
+@Index('idx_workflow_runs_idempotency_key', ['idempotencyKey'])
 @Entity({ name: 'workflow_runs' })
 export class WorkflowRunEntity extends BaseEntity {
-  @Column({ name: 'workflow_name' })
-  workflowName!: string;
+  @Column({
+    name: 'workflow_name',
+    type: 'varchar',
+    length: 100,
+  })
+  workflowName!: WorkflowName;
 
-  @Column({ name: 'workflow_version', default: 'v1' })
-  workflowVersion!: string;
+  @Column({
+    name: 'workflow_version',
+    type: 'varchar',
+    length: 20,
+    default: WorkflowVersion.V1,
+  })
+  workflowVersion!: WorkflowVersion;
 
-  @Column({ name: 'scope_type' })
-  scopeType!: string;
+  @Column({
+    name: 'scope_type',
+    type: 'varchar',
+    length: 50,
+  })
+  scopeType!: WorkflowScopeType;
 
   @Column({ name: 'workspace_id', type: 'uuid', nullable: true })
   workspaceId!: string | null;
@@ -22,8 +48,12 @@ export class WorkflowRunEntity extends BaseEntity {
   @Column({ name: 'requested_by_user_id', type: 'uuid', nullable: true })
   requestedByUserId?: string | null;
 
-  @Column({ name: 'trigger_source' })
-  triggerSource!: string;
+  @Column({
+    name: 'trigger_source',
+    type: 'varchar',
+    length: 50,
+  })
+  triggerSource!: WorkflowTriggerSource;
 
   @Column({ name: 'trigger_event', type: 'text', nullable: true })
   triggerEvent?: string | null;
@@ -42,8 +72,25 @@ export class WorkflowRunEntity extends BaseEntity {
   })
   planningSnapshot!: Record<string, any>;
 
-  @Column()
-  status!: string;
+  @Column({
+    name: 'result_json',
+    type: 'jsonb',
+    nullable: true,
+  })
+  resultJson?: Record<string, any> | null;
+
+  @Column({
+    name: 'metrics_json',
+    type: 'jsonb',
+    nullable: true,
+  })
+  metricsJson?: Record<string, any> | null;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+  })
+  status!: WorkflowRunStatus;
 
   @Column({ default: 5 })
   priority!: number;
@@ -62,4 +109,10 @@ export class WorkflowRunEntity extends BaseEntity {
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage?: string | null;
+
+  @OneToMany(() => WorkflowTaskEntity, (task) => task.workflowRun)
+  tasks!: WorkflowTaskEntity[];
+
+  @OneToMany(() => AgentRunEntity, (agentRun) => agentRun.workflowRun)
+  agentRuns!: AgentRunEntity[];
 }
