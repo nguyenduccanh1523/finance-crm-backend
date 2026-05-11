@@ -6,19 +6,46 @@ import {
   Query,
   Post,
   Delete,
+  Param,
 } from '@nestjs/common';
 import { IntelligenceQueryService } from './intelligence-query.service';
 import { RagUpsertDebugDto } from './dto/rag-upsert-debug.dto';
 import { RagRelatedChunkDebugDto } from './dto/rag-related-chunks-debug.dto';
 import { IntelligenceRagPipelineService } from './intelligence-rag-pipline.service';
 import { FinanceRagSyncDto } from './dto/finance-rag-sync.dto';
+import { IntelligenceOrchestratorService } from './intelligence-orchestrator.service';
 
 @Controller('intelligence/debug')
 export class IntelligenceController {
   constructor(
     private readonly intelligenceQueryService: IntelligenceQueryService,
     private readonly intelligenceRagPipelineService: IntelligenceRagPipelineService,
+    private readonly intelligenceOrchestratorService: IntelligenceOrchestratorService,
   ) {}
+
+  @Post('workflows/finance-knowledge-sync')
+  async startFinanceKnowledgeSync(@Body() body: any) {
+    return this.intelligenceOrchestratorService.startFinanceKnowledgeSyncWorkflow(
+      {
+        workspaceId: body.workspaceId,
+        orgId: body.orgId ?? null,
+        requestedByUserId: body.requestedByUserId ?? body.userId ?? null,
+
+        budgetId: body.budgetId,
+        goalId: body.goalId,
+        month: body.month,
+        transactionWindowDays: body.transactionWindowDays ?? 30,
+        transactionLimit: body.transactionLimit ?? 50,
+
+        idempotencyKey: body.idempotencyKey ?? null,
+      },
+    );
+  }
+
+  @Get('workflows/:workflowRunId')
+  async getWorkflowRun(@Param('workflowRunId') workflowRunId: string) {
+    return this.intelligenceOrchestratorService.getWorkflowRun(workflowRunId);
+  }
 
   @Get('mcp-tools')
   async listMcpTools() {

@@ -14,6 +14,7 @@ import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 import { ArchestraMcpModule } from './modules/core/mcp/archestra-mcp.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import * as redisStore from 'cache-manager-ioredis';
     }),
 
     // Core modules
+    HealthModule,
     UsersModule,
     OrganizationsModule,
     RbacModule,

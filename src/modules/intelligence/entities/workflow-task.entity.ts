@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
 import { BaseEntity } from '../../../common/entities/base.entity';
 import {
@@ -14,7 +7,6 @@ import {
   WorkflowTaskType,
 } from '../workflow/workflow.enums';
 import { WorkflowRunEntity } from './workflow-run.entity';
-import { AgentRunEntity } from './agent-run.entity';
 
 @Index('idx_workflow_tasks_run_id', ['workflowRunId'])
 @Index('idx_workflow_tasks_run_order', ['workflowRunId', 'taskOrder'])
@@ -25,7 +17,7 @@ export class WorkflowTaskEntity extends BaseEntity {
   @Column({ name: 'workflow_run_id', type: 'uuid' })
   workflowRunId!: string;
 
-  @ManyToOne(() => WorkflowRunEntity, (run) => run.tasks, {
+  @ManyToOne(() => WorkflowRunEntity, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'workflow_run_id' })
@@ -128,7 +120,4 @@ export class WorkflowTaskEntity extends BaseEntity {
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage?: string | null;
-
-  @OneToMany(() => AgentRunEntity, (agentRun) => agentRun.workflowTask)
-  agentRuns!: AgentRunEntity[];
 }
