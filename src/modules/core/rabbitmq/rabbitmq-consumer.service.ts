@@ -44,9 +44,7 @@ export class RabbitMqConsumerService implements OnModuleDestroy {
       throw new Error('RabbitMQ consumer channel is not initialized');
     }
 
-    await this.channel.assertQueue(params.queueName, {
-      durable: true,
-    });
+    await this.channel.checkQueue(params.queueName);
 
     await this.channel.consume(params.queueName, async (msg) => {
       if (!msg) return;
