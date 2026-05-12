@@ -13,7 +13,7 @@ export class AgentRunEntity extends BaseEntity {
   @Column({ name: 'workflow_run_id', type: 'uuid' })
   workflowRunId!: string;
 
-  @ManyToOne(() => WorkflowRunEntity, (run) => run.agentRuns, {
+  @ManyToOne(() => WorkflowRunEntity, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'workflow_run_id' })
@@ -22,7 +22,7 @@ export class AgentRunEntity extends BaseEntity {
   @Column({ name: 'workflow_task_id', type: 'uuid' })
   workflowTaskId!: string;
 
-  @ManyToOne(() => WorkflowTaskEntity, (task) => task.agentRuns, {
+  @ManyToOne(() => WorkflowTaskEntity, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'workflow_task_id' })

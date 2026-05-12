@@ -1,4 +1,4 @@
-import { Column, Entity, Index, OneToMany } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 
 import { BaseEntity } from '../../../common/entities/base.entity';
 import {
@@ -8,8 +8,6 @@ import {
   WorkflowTriggerSource,
   WorkflowVersion,
 } from '../workflow/workflow.enums';
-import { WorkflowTaskEntity } from './workflow-task.entity';
-import { AgentRunEntity } from './agent-run.entity';
 
 @Index('idx_workflow_runs_status', ['status'])
 @Index('idx_workflow_runs_workspace_status', ['workspaceId', 'status'])
@@ -109,10 +107,4 @@ export class WorkflowRunEntity extends BaseEntity {
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage?: string | null;
-
-  @OneToMany(() => WorkflowTaskEntity, (task) => task.workflowRun)
-  tasks!: WorkflowTaskEntity[];
-
-  @OneToMany(() => AgentRunEntity, (agentRun) => agentRun.workflowRun)
-  agentRuns!: AgentRunEntity[];
 }

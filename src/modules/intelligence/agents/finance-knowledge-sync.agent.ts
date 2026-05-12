@@ -100,8 +100,29 @@ export class FinanceKnowledgeSyncAgent implements OnModuleInit {
     );
 
     const startedAt = new Date();
+    const startedAtMs = Date.now();
 
     try {
+      if (!run.workspaceId) {
+        throw new Error(
+          'workspaceId is required for FinanceKnowledgeSyncAgent',
+        );
+      }
+
+      if (!message.payload?.budgetId) {
+        throw new Error('budgetId is required for finance knowledge sync');
+      }
+
+      if (!message.payload?.goalId) {
+        throw new Error('goalId is required for finance knowledge sync');
+      }
+
+      if (!message.payload?.month) {
+        throw new Error('month is required for finance knowledge sync');
+      }
+
+      const workspaceId = run.workspaceId;
+
       await this.workflowTaskRepo.update(task.id, {
         status: WorkflowTaskStatus.RUNNING,
         attemptCount: nextAttemptCount,
@@ -111,19 +132,26 @@ export class FinanceKnowledgeSyncAgent implements OnModuleInit {
       });
 
       const result = await this.ragPipelineService.syncFinanceIntoRag({
-        workspaceId: run.workspaceId,
-        orgId: run.orgId,
-        userId: run.requestedByUserId ?? undefined,
-        fromDate: message.payload?.fromDate,
-        toDate: message.payload?.toDate,
-        month: message.payload?.month,
+        workspaceId,
+        budgetId: message.payload.budgetId,
+        goalId: message.payload.goalId,
+        month: message.payload.month,
+        transactionWindowDays: message.payload.transactionWindowDays ?? 30,
+        transactionLimit: message.payload.transactionLimit ?? 50,
       });
 
       const finishedAt = new Date();
+      const durationMs = Date.now() - startedAtMs;
+
+      const successMetrics = {
+        durationMs,
+        attempt: nextAttemptCount,
+        success: true,
+      } as any;
 
       await this.workflowTaskRepo.update(task.id, {
         status: WorkflowTaskStatus.COMPLETED,
-        outputPayload: result,
+        outputPayload: result as any,
         finishedAt,
         lockedAt: null,
         errorCode: null,
@@ -132,11 +160,8 @@ export class FinanceKnowledgeSyncAgent implements OnModuleInit {
 
       await this.agentRunRepo.update(agentRun.id, {
         status: AgentRunStatus.COMPLETED,
-        resultJson: result,
-        metricsJson: {
-          durationMs: finishedAt.getTime() - startedAt.getTime(),
-          attempt: nextAttemptCount,
-        },
+        resultJson: result as any,
+        metricsJson: successMetrics,
         finishedAt,
         errorCode: null,
         errorMessage: null,
@@ -146,11 +171,12 @@ export class FinanceKnowledgeSyncAgent implements OnModuleInit {
         status: WorkflowRunStatus.COMPLETED,
         resultJson: {
           financeKnowledgeSync: result,
-        },
+        } as any,
         metricsJson: {
           completedTaskCount: 1,
           failedTaskCount: 0,
-        },
+          durationMs,
+        } as any,
         finishedAt,
         errorCode: null,
         errorMessage: null,
@@ -161,12 +187,21 @@ export class FinanceKnowledgeSyncAgent implements OnModuleInit {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown agent error';
 
+      const durationMs = Date.now() - startedAtMs;
+
+      const failedMetrics = {
+        durationMs,
+        attempt: nextAttemptCount,
+        success: false,
+      } as any;
+
       const canRetry = nextAttemptCount < task.maxAttempts;
 
       await this.agentRunRepo.update(agentRun.id, {
         status: AgentRunStatus.FAILED,
         errorCode: 'FINANCE_KNOWLEDGE_SYNC_AGENT_FAILED',
         errorMessage,
+        metricsJson: failedMetrics,
         finishedAt: new Date(),
       });
 

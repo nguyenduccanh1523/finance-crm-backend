@@ -24,22 +24,36 @@ import { IntelligenceQueryService } from './intelligence-query.service';
 import { IntelligenceNormalizerService } from './intelligence-normalizer.service';
 import { IntelligenceRagPipelineService } from './intelligence-rag-pipline.service';
 import { In } from 'typeorm';
+import { IntelligenceOrchestratorService } from './intelligence-orchestrator.service';
+import { WorkflowTaskDispatcherService } from './workflow/workflow-task-dispatcher.service';
+import { FinanceKnowledgeSyncAgent } from './agents/finance-knowledge-sync.agent';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([KnowledgeDocument, KnowledgeChunk]),
+    TypeOrmModule.forFeature([
+      KnowledgeDocument,
+      KnowledgeChunk,
+      WorkflowRunEntity,
+      WorkflowTaskEntity,
+      AgentRunEntity,
+    ]),
+    RabbitMqModule,
     ArchestraMcpModule,
   ],
   controllers: [IntelligenceController],
   providers: [
+    IntelligenceOrchestratorService,
     IntelligenceQueryService,
     IntelligenceNormalizerService,
     IntelligenceRagPipelineService,
+    WorkflowTaskDispatcherService,
+    FinanceKnowledgeSyncAgent,
   ],
   exports: [
     IntelligenceQueryService,
     IntelligenceNormalizerService,
     IntelligenceRagPipelineService,
+    IntelligenceOrchestratorService,
   ],
 })
 export class IntelligenceModule {}
