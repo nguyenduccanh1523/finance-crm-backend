@@ -47,6 +47,13 @@ export class IntelligenceController {
     return this.intelligenceOrchestratorService.getWorkflowRun(workflowRunId);
   }
 
+  @Get('workflows/:workflowRunId/progress')
+  async getWorkflowProgress(@Param('workflowRunId') workflowRunId: string) {
+    return this.intelligenceOrchestratorService.getWorkflowProgress(
+      workflowRunId,
+    );
+  }
+
   @Get('mcp-tools')
   async listMcpTools() {
     return this.intelligenceQueryService.testFinanceGatewayTools();
