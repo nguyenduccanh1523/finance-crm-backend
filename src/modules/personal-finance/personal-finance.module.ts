@@ -53,6 +53,9 @@ import { RecurringRulesService } from './recurring-rules/recurring-rules.service
 import { RecurringRulesController } from './recurring-rules/recurring-rules.controller';
 import { RecurringRulesRepository } from './recurring-rules/recurring-rules.repository';
 
+import { DashboardController } from './dashboard/dashboard.controller';
+import { DashboardService } from './dashboard/dashboard.service';
+
 import { RepositoriesModule } from './repositories.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from '../billing/billing.module';
@@ -99,6 +102,8 @@ import { ExchangeRate } from './entities/exchange-rate.entity';
     BudgetsController,
     GoalsController,
     RecurringRulesController,
+
+    DashboardController,
   ],
   providers: [
     PersonalWorkspaceService,
@@ -126,6 +131,8 @@ import { ExchangeRate } from './entities/exchange-rate.entity';
 
     RecurringRulesService,
     RecurringRulesRepository,
+
+    DashboardService,
   ],
   exports: [PersonalWorkspaceService, PersonalPlanPolicyService],
 })

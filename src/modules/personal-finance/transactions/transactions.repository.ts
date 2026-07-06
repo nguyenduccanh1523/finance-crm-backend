@@ -122,4 +122,156 @@ export class TransactionsRepository {
   getDataSource() {
     return this.dataSource;
   }
+
+  /**
+   * Lấy tổng income & expense của tháng hiện tại VÀ tháng trước trong 1 query duy nhất.
+   * Dùng CASE WHEN để tránh phải chạy 2 queries riêng.
+   *
+   * @param workspaceId
+   * @param thisStart  - đầu tháng hiện tại (UTC)
+   * @param thisEnd    - đầu tháng sau (exclusive, UTC)
+   * @param lastStart  - đầu tháng trước (UTC)
+   * @param lastEnd    - đầu tháng hiện tại (exclusive, UTC)
+   */
+  async getDashboardMonthlyStats(
+    workspaceId: string,
+    thisStart: Date,
+    thisEnd: Date,
+    lastStart: Date,
+    lastEnd: Date,
+  ): Promise<{
+    thisIncomeCents: number;
+    thisExpenseCents: number;
+    lastIncomeCents: number;
+    lastExpenseCents: number;
+  }> {
+    const result = await this.txRepo
+      .createQueryBuilder('t')
+      .select(
+        // Tháng hiện tại
+        `COALESCE(SUM(CASE WHEN t.occurred_at >= :thisStart AND t.occurred_at < :thisEnd AND t.type = 'INCOME'  THEN t.amount_cents ELSE 0 END), 0)`,
+        'thisIncomeCents',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN t.occurred_at >= :thisStart AND t.occurred_at < :thisEnd AND t.type = 'EXPENSE' THEN t.amount_cents ELSE 0 END), 0)`,
+        'thisExpenseCents',
+      )
+      // Tháng trước
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN t.occurred_at >= :lastStart AND t.occurred_at < :lastEnd AND t.type = 'INCOME'  THEN t.amount_cents ELSE 0 END), 0)`,
+        'lastIncomeCents',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN t.occurred_at >= :lastStart AND t.occurred_at < :lastEnd AND t.type = 'EXPENSE' THEN t.amount_cents ELSE 0 END), 0)`,
+        'lastExpenseCents',
+      )
+      .where('t.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('t.deleted_at IS NULL')
+      // Filter range: tháng trước đến cuối tháng hiện tại
+      .andWhere('t.occurred_at >= :lastStart AND t.occurred_at < :thisEnd', {
+        lastStart,
+        thisEnd,
+      })
+      .setParameter('thisStart', thisStart)
+      .setParameter('lastStart', lastStart)
+      .setParameter('lastEnd', lastEnd)
+      .getRawOne();
+
+    return {
+      thisIncomeCents: Number(result?.thisIncomeCents ?? 0),
+      thisExpenseCents: Number(result?.thisExpenseCents ?? 0),
+      lastIncomeCents: Number(result?.lastIncomeCents ?? 0),
+      lastExpenseCents: Number(result?.lastExpenseCents ?? 0),
+    };
+  }
+
+  /**
+   * Lấy hoạt động tài chính theo từng ngày trong 7 ngày gần nhất.
+   * Bao gồm TẤT CẢ loại giao dịch: INCOME, EXPENSE, TRANSFER, budget, goal.
+   * GROUP BY ngày → trả về mảng { date, totalCents }.
+   */
+  async getWeeklySpending(
+    workspaceId: string,
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ date: string; totalCents: number }>> {
+    const rows = await this.txRepo
+      .createQueryBuilder('t')
+      .select(`TO_CHAR(t.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')`, 'date')
+      .addSelect('COALESCE(SUM(t.amount_cents), 0)', 'totalCents')
+      .where('t.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('t.deleted_at IS NULL')
+      // Bao gồm tất cả loại giao dịch – không lọc type
+      .andWhere('t.occurred_at >= :from AND t.occurred_at < :to', { from, to })
+      .groupBy(`TO_CHAR(t.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')`)
+      .orderBy(`TO_CHAR(t.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')`, 'ASC')
+      .getRawMany();
+
+    return rows.map((r) => ({
+      date: r.date as string,
+      totalCents: Number(r.totalCents),
+    }));
+  }
+
+  /**
+   * Lấy N transactions mới nhất (tất cả loại: INCOME/EXPENSE/TRANSFER/budget/goal).
+   * Join category + account để lấy name hiển thị.
+   *
+   * LƯU Ý: Phải dùng entity property names trong .select() (camelCase),
+   * KHÔNG dùng SQL column names (snake_case) – TypeORM sẽ không map được.
+   * Ví dụ: 't.amountCents' ✅  |  't.amount_cents' ❌
+   */
+  async getRecentTransactions(
+    workspaceId: string,
+    limit = 5,
+  ): Promise<
+    Array<{
+      id: string;
+      note: string | null;
+      counterparty: string | null;
+      type: string;
+      amountCents: number;
+      currency: string;
+      occurredAt: Date;
+      categoryName: string | null;
+      categoryIcon: string | null;
+      accountName: string | null;
+    }>
+  > {
+    const rows = await this.txRepo
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'cat')
+      .leftJoin('t.account', 'acc')
+      .select([
+        't.id',
+        't.note',
+        't.counterparty',
+        't.type',
+        't.amountCents',   // ✅ entity property name (camelCase)
+        't.currency',
+        't.occurredAt',    // ✅ entity property name (camelCase)
+        'cat.name',
+        'cat.icon',
+        'acc.name',
+      ])
+      .where('t.workspace_id = :workspaceId', { workspaceId })
+      .andWhere('t.deleted_at IS NULL')
+      .orderBy('t.occurredAt', 'DESC')
+      .limit(limit)
+      .getMany();
+
+    return rows.map((t) => ({
+      id: t.id,
+      note: t.note ?? null,
+      counterparty: t.counterparty ?? null,
+      type: t.type as string,
+      amountCents: Number(t.amountCents),   // Bây giờ đã có giá trị
+      currency: t.currency,
+      occurredAt: t.occurredAt,
+      categoryName: (t as any).category?.name ?? null,
+      categoryIcon: (t as any).category?.icon ?? null,
+      accountName: (t as any).account?.name ?? null,
+    }));
+  }
 }
+

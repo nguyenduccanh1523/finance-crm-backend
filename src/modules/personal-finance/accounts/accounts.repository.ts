@@ -59,4 +59,38 @@ export class AccountsRepository {
   async findByIdWithoutDeleted(id: string) {
     return this.repo.findOne({ where: { id } });
   }
+
+  /**
+   * Lấy danh sách tất cả accounts kèm balance và currency.
+   * Trả về từng account (không gộp) để frontend hiển thị dòng tiền ở mỗi tài khoản.
+   * Đồng thời tính tổng và số lượng để phục vụ trend text.
+   */
+  async getAccountsWithBalance(workspaceId: string): Promise<{
+    accounts: Array<{
+      id: string;
+      name: string;
+      type: string;
+      currency: string;
+      currentBalanceCents: number;
+    }>;
+    accountCount: number;
+  }> {
+    const accounts = await this.repo.find({
+      where: { workspaceId, deletedAt: IsNull() as any },
+      select: ['id', 'name', 'type', 'currency', 'currentBalanceCents'],
+      order: { createdAt: 'ASC' as any },
+    });
+
+    return {
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        name: a.name,
+        type: a.type as string,
+        currency: a.currency,
+        currentBalanceCents: Number(a.currentBalanceCents),
+      })),
+      accountCount: accounts.length,
+    };
+  }
 }
+

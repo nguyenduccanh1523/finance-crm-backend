@@ -167,6 +167,163 @@ export class IntelligenceOrchestratorService {
     };
   }
 
+  async getWorkflowProgress(workflowRunId: string) {
+    const run = await this.workflowRunRepo.findOne({
+      where: {
+        id: workflowRunId,
+      },
+    });
+
+    if (!run) {
+      throw new NotFoundException('Workflow run not found');
+    }
+
+    const tasks = await this.workflowTaskRepo.find({
+      where: {
+        workflowRunId,
+      },
+      order: {
+        taskOrder: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
+
+    const agentRuns = await this.agentRunRepo.find({
+      where: {
+        workflowRunId,
+      },
+      order: {
+        createdAt: 'ASC',
+      },
+    });
+
+    const totalTasks = tasks.length;
+
+    const completedTasks = tasks.filter(
+      (task) => task.status === 'COMPLETED',
+    ).length;
+
+    const failedTasks = tasks.filter((task) => task.status === 'FAILED').length;
+
+    const runningTasks = tasks.filter(
+      (task) => task.status === 'RUNNING',
+    ).length;
+
+    const queuedTasks = tasks.filter((task) => task.status === 'QUEUED').length;
+
+    let progressPercent = totalTasks
+      ? Math.round((completedTasks / totalTasks) * 100)
+      : 0;
+
+    if (run.status === 'COMPLETED' || run.status === 'FAILED') {
+      progressPercent = 100;
+    }
+
+    const currentTask =
+      tasks.find((task) => ['RUNNING', 'QUEUED'].includes(task.status)) ??
+      tasks[tasks.length - 1] ??
+      null;
+
+    const latestAgentRun = agentRuns[agentRuns.length - 1] ?? null;
+
+    return {
+      workflowRunId: run.id,
+      workflowName: run.workflowName,
+      workflowVersion: run.workflowVersion,
+      status: run.status,
+      progressPercent,
+
+      summary: {
+        totalTasks,
+        completedTasks,
+        failedTasks,
+        runningTasks,
+        queuedTasks,
+        agentRunCount: agentRuns.length,
+      },
+
+      requestPayload: run.requestPayload,
+      resultJson: run.resultJson,
+      metricsJson: run.metricsJson,
+
+      error: run.errorCode
+        ? {
+            errorCode: run.errorCode,
+            errorMessage: run.errorMessage,
+          }
+        : null,
+
+      currentTask: currentTask
+        ? {
+            id: currentTask.id,
+            taskOrder: currentTask.taskOrder,
+            taskType: currentTask.taskType,
+            agentName: currentTask.agentName,
+            status: currentTask.status,
+            attemptCount: currentTask.attemptCount,
+            maxAttempts: currentTask.maxAttempts,
+            errorCode: currentTask.errorCode,
+            errorMessage: currentTask.errorMessage,
+            startedAt: currentTask.startedAt,
+            finishedAt: currentTask.finishedAt,
+          }
+        : null,
+
+      latestAgentRun: latestAgentRun
+        ? {
+            id: latestAgentRun.id,
+            workflowTaskId: latestAgentRun.workflowTaskId,
+            agentName: latestAgentRun.agentName,
+            status: latestAgentRun.status,
+            metricsJson: latestAgentRun.metricsJson,
+            errorCode: latestAgentRun.errorCode,
+            errorMessage: latestAgentRun.errorMessage,
+            startedAt: latestAgentRun.startedAt,
+            finishedAt: latestAgentRun.finishedAt,
+          }
+        : null,
+
+      tasks: tasks.map((task) => ({
+        id: task.id,
+        taskOrder: task.taskOrder,
+        taskType: task.taskType,
+        agentName: task.agentName,
+        queueName: task.queueName,
+        routingKey: task.routingKey,
+        status: task.status,
+        attemptCount: task.attemptCount,
+        maxAttempts: task.maxAttempts,
+        inputPayload: task.inputPayload,
+        outputPayload: task.outputPayload,
+        errorCode: task.errorCode,
+        errorMessage: task.errorMessage,
+        startedAt: task.startedAt,
+        finishedAt: task.finishedAt,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      })),
+
+      agentRuns: agentRuns.map((agentRun) => ({
+        id: agentRun.id,
+        workflowTaskId: agentRun.workflowTaskId,
+        agentName: agentRun.agentName,
+        status: agentRun.status,
+        metricsJson: agentRun.metricsJson,
+        errorCode: agentRun.errorCode,
+        errorMessage: agentRun.errorMessage,
+        startedAt: agentRun.startedAt,
+        finishedAt: agentRun.finishedAt,
+        createdAt: agentRun.createdAt,
+        updatedAt: agentRun.updatedAt,
+      })),
+
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      createdAt: run.createdAt,
+      updatedAt: run.updatedAt,
+    };
+  }
+
   async getWorkflowRun(workflowRunId: string) {
     const run = await this.workflowRunRepo.findOne({
       where: {
