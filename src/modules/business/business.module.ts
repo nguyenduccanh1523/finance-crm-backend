@@ -24,6 +24,8 @@ import { BusinessController } from './business.controller';
 import { BusinessCrudService } from './business-crud.service';
 import { BusinessDashboardController } from './dashboard/business-dashboard.controller';
 import { BusinessDashboardService } from './dashboard/business-dashboard.service';
+import { CrmCustomersController } from './clients/crm-customers.controller';
+import { CrmCustomersService } from './clients/crm-customers.service';
 import { OrganizationsModule } from '../core/organizations/organizations.module';
 
 @Module({
@@ -52,9 +54,17 @@ import { OrganizationsModule } from '../core/organizations/organizations.module'
       Report,
     ]),
   ],
-  // Register the static dashboard route before the generic :resource route.
-  controllers: [BusinessDashboardController, BusinessController],
-  providers: [BusinessCrudService, BusinessDashboardService],
+  // Register explicit CRM routes before the generic :resource route.
+  controllers: [
+    BusinessDashboardController,
+    CrmCustomersController,
+    BusinessController,
+  ],
+  providers: [
+    BusinessCrudService,
+    BusinessDashboardService,
+    CrmCustomersService,
+  ],
   exports: [TypeOrmModule],
 })
 export class BusinessModule {}
