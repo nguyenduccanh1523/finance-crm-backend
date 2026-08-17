@@ -20,9 +20,15 @@ import { ConversationMember } from './communication/entities/conversation-member
 import { Message } from './communication/entities/message.entity';
 import { Email } from './communication/entities/email.entity';
 import { Report } from './communication/entities/report.entity';
+import { BusinessController } from './business.controller';
+import { BusinessCrudService } from './business-crud.service';
+import { BusinessDashboardController } from './dashboard/business-dashboard.controller';
+import { BusinessDashboardService } from './dashboard/business-dashboard.service';
+import { OrganizationsModule } from '../core/organizations/organizations.module';
 
 @Module({
   imports: [
+    OrganizationsModule,
     TypeOrmModule.forFeature([
       CrmCustomer,
       CrmContact,
@@ -46,6 +52,9 @@ import { Report } from './communication/entities/report.entity';
       Report,
     ]),
   ],
+  // Register the static dashboard route before the generic :resource route.
+  controllers: [BusinessDashboardController, BusinessController],
+  providers: [BusinessCrudService, BusinessDashboardService],
   exports: [TypeOrmModule],
 })
 export class BusinessModule {}

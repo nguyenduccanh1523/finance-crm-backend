@@ -1,4 +1,11 @@
-import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { SoftDeleteEntity } from '../../../common/entities/soft-delete.entity';
 import { User } from '../users/user.entity';
 import { Membership } from '../rbac/membership.entity';
@@ -38,6 +45,7 @@ export class Organization extends SoftDeleteEntity {
     nullable: false,
     onDelete: 'RESTRICT',
   })
+  @JoinColumn({ name: 'created_by' })
   createdBy!: User;
 
   @OneToMany(() => Membership, (m) => m.organization)
