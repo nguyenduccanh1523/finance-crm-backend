@@ -14,10 +14,16 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { cookieConfig } from '../../../config/cookie.config';
 import { RegisterDto } from './dto/register.dto';
+import { OrganizationContextService } from '../organizations/organization-context.service';
+
+const ACTIVE_ORG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly organizationContextService: OrganizationContextService,
+  ) {}
 
   @Post('request-otp')
   async requestOtp(@Body('email') email: string) {
@@ -66,6 +72,18 @@ export class AuthController {
       ...cookieConfig,
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
+
+    // A single-org user should not need a separate organization-selection step.
+    const autoSelectedOrgId =
+      await this.organizationContextService.getAutoSelectedOrganization(
+        user.id,
+      );
+    if (autoSelectedOrgId) {
+      res.cookie('active_org_id', autoSelectedOrgId, {
+        ...cookieConfig,
+        maxAge: ACTIVE_ORG_COOKIE_MAX_AGE,
+      });
+    }
 
     return {
       statusCode: 200,
@@ -116,9 +134,10 @@ export class AuthController {
     @CurrentUser() user: any,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    await this.authService.logout(user.sub);
+    await this.authService.logout(user.id);
     res.clearCookie('access_token', cookieConfig);
     res.clearCookie('refresh_token', cookieConfig);
+    res.clearCookie('active_org_id', cookieConfig);
     return {
       statusCode: 200,
       message: 'Đăng xuất thành công',
@@ -128,11 +147,16 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@CurrentUser() user: any) {
+  async me(@CurrentUser() user: any, @Req() req: express.Request) {
     return {
-      id: user.sub,
+      id: user.id,
       email: user.email,
       roles: user.roles,
+      activeOrganization:
+        await this.organizationContextService.getCurrentOrganization(
+          user,
+          req.cookies?.active_org_id,
+        ),
     };
   }
 }

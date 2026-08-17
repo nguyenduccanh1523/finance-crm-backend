@@ -10,6 +10,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { jwtConfig } from '../../../config/jwt.config';
 import { MailerModule } from '../mailer/mailer.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { PersonalFinanceModule } from '../../personal-finance/personal-finance.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { RbacModule } from '../rbac/rbac.module';
     }),
     MailerModule,
     RbacModule,
+    OrganizationsModule,
+    PersonalFinanceModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

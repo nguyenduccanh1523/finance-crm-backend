@@ -8,6 +8,10 @@ function cookieExtractor(req: Request): string | null {
   if (req && req.cookies && req.cookies['access_token']) {
     return req.cookies['access_token'];
   }
+  const authorization = req?.headers?.authorization;
+  if (authorization?.startsWith('Bearer ')) {
+    return authorization.slice(7);
+  }
   return null;
 }
 

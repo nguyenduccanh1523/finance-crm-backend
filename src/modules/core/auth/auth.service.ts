@@ -19,6 +19,7 @@ import { Role } from '../rbac/role.entity';
 import { RegisterDto } from './dto/register.dto';
 import * as cacheManager from 'cache-manager';
 import { MailService } from '../mailer/mail.service';
+import { PersonalWorkspaceService } from '../../personal-finance/workspace/personal-workspace.service';
 
 interface JwtPayload {
   sub: string;
@@ -45,6 +46,7 @@ export class AuthService {
 
     // ⬇️🔥 Thêm MailService
     private readonly mailService: MailService,
+    private readonly personalWorkspaceService: PersonalWorkspaceService,
   ) {}
 
   private generateOTP(): string {
@@ -230,6 +232,7 @@ export class AuthService {
     });
 
     await this.userRepo.save(user);
+    await this.personalWorkspaceService.getOrCreateByUserId(user.id);
 
     // ✅ Xoá flag verified để tránh reuse
     await this.cacheManager.del(verifiedKey);

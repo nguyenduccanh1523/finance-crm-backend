@@ -20,9 +20,17 @@ import { ConversationMember } from './communication/entities/conversation-member
 import { Message } from './communication/entities/message.entity';
 import { Email } from './communication/entities/email.entity';
 import { Report } from './communication/entities/report.entity';
+import { BusinessController } from './business.controller';
+import { BusinessCrudService } from './business-crud.service';
+import { BusinessDashboardController } from './dashboard/business-dashboard.controller';
+import { BusinessDashboardService } from './dashboard/business-dashboard.service';
+import { CrmCustomersController } from './clients/crm-customers.controller';
+import { CrmCustomersService } from './clients/crm-customers.service';
+import { OrganizationsModule } from '../core/organizations/organizations.module';
 
 @Module({
   imports: [
+    OrganizationsModule,
     TypeOrmModule.forFeature([
       CrmCustomer,
       CrmContact,
@@ -45,6 +53,17 @@ import { Report } from './communication/entities/report.entity';
       Email,
       Report,
     ]),
+  ],
+  // Register explicit CRM routes before the generic :resource route.
+  controllers: [
+    BusinessDashboardController,
+    CrmCustomersController,
+    BusinessController,
+  ],
+  providers: [
+    BusinessCrudService,
+    BusinessDashboardService,
+    CrmCustomersService,
   ],
   exports: [TypeOrmModule],
 })

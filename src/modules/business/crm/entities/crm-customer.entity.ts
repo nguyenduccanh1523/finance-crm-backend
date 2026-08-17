@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { SoftDeleteEntity } from '../../../../common/entities/soft-delete.entity';
 import { Organization } from '../../../core/organizations/organization.entity';
 import { Membership } from '../../../core/rbac/membership.entity';
@@ -13,24 +13,29 @@ export class CrmCustomer extends SoftDeleteEntity {
   orgId: string;
 
   @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
-  organization: Organization;
+  @JoinColumn({ name: 'org_id' })
+  organization!: Organization;
 
   @Column() name: string;
 
   @Column({ type: 'text' })
   type: CustomerType;
 
-  @Column({ nullable: true }) industry?: string;
-  @Column({ nullable: true }) website?: string;
-  @Column({ nullable: true }) phone?: string;
-  @Column({ nullable: true }) email?: string;
-  @Column({ nullable: true }) address?: string;
+  @Column({ type: 'varchar', nullable: true }) industry?: string | null;
+  @Column({ type: 'varchar', nullable: true }) website?: string | null;
+  @Column({ type: 'varchar', nullable: true }) phone?: string | null;
+  @Column({ type: 'varchar', nullable: true }) email?: string | null;
+  @Column({ type: 'varchar', nullable: true }) address?: string | null;
 
   @Column() stage: string;
+
+  @Column({ name: 'estimated_value_cents', type: 'bigint', default: '0' })
+  estimatedValueCents: string;
 
   @Column({ name: 'owner_membership_id', type: 'uuid' })
   ownerMembershipId: string;
 
   @ManyToOne(() => Membership)
+  @JoinColumn({ name: 'owner_membership_id' })
   owner: Membership;
 }
