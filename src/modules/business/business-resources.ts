@@ -25,19 +25,65 @@ export interface BusinessResource {
 }
 
 export const BUSINESS_RESOURCES: Record<string, BusinessResource> = {
-  'crm-customers': { entity: CrmCustomer, searchColumns: ['name', 'industry', 'email', 'phone', 'stage'], membershipFields: ['ownerMembershipId'] },
-  'crm-contacts': { entity: CrmContact, searchColumns: ['fullName', 'email', 'phone', 'title', 'notes'] },
-  'crm-activities': { entity: CrmActivity, searchColumns: ['type', 'summary'], membershipFields: ['createdByMembershipId'] },
+  'crm-customers': {
+    entity: CrmCustomer,
+    searchColumns: ['name', 'industry', 'email', 'phone', 'stage'],
+    membershipFields: ['ownerMembershipId'],
+  },
+  'crm-contacts': {
+    entity: CrmContact,
+    searchColumns: ['fullName', 'email', 'phone', 'title', 'notes'],
+  },
+  'crm-activities': {
+    entity: CrmActivity,
+    searchColumns: ['type', 'summary'],
+    membershipFields: ['createdByMembershipId'],
+  },
   statuses: { entity: Status, searchColumns: ['entityType', 'name'] },
   'work-types': { entity: WorkType, searchColumns: ['name', 'color'] },
-  projects: { entity: Project, searchColumns: ['name', 'description'], membershipFields: ['ownerMembershipId'] },
-  tasks: { entity: Task, searchColumns: ['title', 'description'], userFields: ['createdBy'] },
+  projects: {
+    entity: Project,
+    searchColumns: ['name', 'description'],
+    membershipFields: ['ownerMembershipId'],
+  },
+  tasks: {
+    entity: Task,
+    searchColumns: ['title', 'description'],
+    userFields: ['createdBy'],
+  },
   invoices: { entity: Invoice, searchColumns: ['number', 'currency'] },
-  expenses: { entity: OrgExpense, searchColumns: ['category', 'note', 'currency'], userFields: ['createdBy'] },
-  attendance: { entity: AttendanceRecord, searchColumns: ['status', 'note'], membershipFields: ['membershipId'] },
-  timesheets: { entity: TimesheetEntry, searchColumns: ['status', 'description'], membershipFields: ['membershipId'] },
-  conversations: { entity: Conversation, searchColumns: ['title', 'type'], userFields: ['createdBy'] },
-  messages: { entity: Message, searchColumns: ['body'], membershipFields: ['senderMembershipId'] },
-  emails: { entity: Email, searchColumns: ['fromEmail', 'subject', 'body', 'providerMsgId'] },
-  reports: { entity: Report, searchColumns: ['type', 'fileUrl'], userFields: ['generatedByUserId'] },
+  expenses: {
+    entity: OrgExpense,
+    searchColumns: ['category', 'note', 'currency'],
+    userFields: ['createdBy'],
+  },
+  attendance: {
+    entity: AttendanceRecord,
+    searchColumns: ['status', 'note'],
+    membershipFields: ['membershipId'],
+  },
+  timesheets: {
+    entity: TimesheetEntry,
+    searchColumns: ['status', 'description'],
+    membershipFields: ['membershipId'],
+  },
+  conversations: {
+    entity: Conversation,
+    searchColumns: ['title', 'type'],
+    userFields: ['createdBy'],
+  },
+  messages: {
+    entity: Message,
+    searchColumns: ['body'],
+    membershipFields: ['senderMembershipId'],
+  },
+  emails: {
+    entity: Email,
+    searchColumns: ['fromEmail', 'subject', 'body', 'providerMsgId'],
+  },
+  reports: {
+    entity: Report,
+    searchColumns: ['type', 'fileUrl'],
+    userFields: ['generatedByUserId'],
+  },
 };

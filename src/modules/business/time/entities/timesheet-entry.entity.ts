@@ -24,7 +24,7 @@ export class TimesheetEntry extends BaseEntity {
   @Column({ name: 'work_date', type: 'date' })
   workDate: string;
 
-  @Column({ nullable: true }) description?: string;
+  @Column({ type: 'varchar', nullable: true }) description?: string | null;
 
   @Column() status: string;
 

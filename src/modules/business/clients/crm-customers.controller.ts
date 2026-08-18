@@ -34,7 +34,8 @@ import {
 @ApiHeader({
   name: 'x-org-id',
   required: false,
-  description: 'Optional fallback for API clients. Browser requests use active_org_id cookie.',
+  description:
+    'Optional fallback for API clients. Browser requests use active_org_id cookie.',
 })
 @UseGuards(JwtAuthGuard)
 @Controller('business/clients')
@@ -42,14 +43,21 @@ export class CrmCustomersController {
   constructor(private readonly service: CrmCustomersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List clients with pagination, search, sorting, and filters' })
+  @ApiOperation({
+    summary: 'List clients with pagination, search, sorting, and filters',
+  })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Req() req: Request,
     @Headers('x-org-id') fallbackOrgId: string | undefined,
     @Query() query: ListCrmCustomersQueryDto,
   ) {
-    return this.service.list(user, req.cookies?.active_org_id, fallbackOrgId, query);
+    return this.service.list(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+      query,
+    );
   }
 
   @Get('summary')
@@ -59,17 +67,28 @@ export class CrmCustomersController {
     @Req() req: Request,
     @Headers('x-org-id') fallbackOrgId: string | undefined,
   ) {
-    return this.service.summary(user, req.cookies?.active_org_id, fallbackOrgId);
+    return this.service.summary(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+    );
   }
 
   @Get('metadata')
-  @ApiOperation({ summary: 'Get client stages, types, and valid owners for the active organization' })
+  @ApiOperation({
+    summary:
+      'Get client stages, types, and valid owners for the active organization',
+  })
   metadata(
     @CurrentUser() user: AuthenticatedUser,
     @Req() req: Request,
     @Headers('x-org-id') fallbackOrgId: string | undefined,
   ) {
-    return this.service.metadata(user, req.cookies?.active_org_id, fallbackOrgId);
+    return this.service.metadata(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+    );
   }
 
   @Get(':id')
@@ -80,7 +99,12 @@ export class CrmCustomersController {
     @Headers('x-org-id') fallbackOrgId: string | undefined,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.service.get(user, req.cookies?.active_org_id, fallbackOrgId, id);
+    return this.service.get(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+      id,
+    );
   }
 
   @Post()
@@ -91,7 +115,12 @@ export class CrmCustomersController {
     @Headers('x-org-id') fallbackOrgId: string | undefined,
     @Body() dto: CreateCrmCustomerDto,
   ) {
-    return this.service.create(user, req.cookies?.active_org_id, fallbackOrgId, dto);
+    return this.service.create(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+      dto,
+    );
   }
 
   @Patch(':id')
@@ -103,7 +132,13 @@ export class CrmCustomersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCrmCustomerDto,
   ) {
-    return this.service.update(user, req.cookies?.active_org_id, fallbackOrgId, id, dto);
+    return this.service.update(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+      id,
+      dto,
+    );
   }
 
   @Delete(':id')
@@ -114,6 +149,11 @@ export class CrmCustomersController {
     @Headers('x-org-id') fallbackOrgId: string | undefined,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.service.remove(user, req.cookies?.active_org_id, fallbackOrgId, id);
+    return this.service.remove(
+      user,
+      req.cookies?.active_org_id,
+      fallbackOrgId,
+      id,
+    );
   }
 }

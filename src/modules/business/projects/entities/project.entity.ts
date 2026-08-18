@@ -8,7 +8,7 @@ export class Project extends SoftDeleteEntity {
   orgId: string;
 
   @Column() name: string;
-  @Column({ nullable: true }) description?: string;
+  @Column({ type: 'varchar', nullable: true }) description?: string | null;
 
   @Column({ name: 'status_id', type: 'uuid' })
   statusId: string;
@@ -17,7 +17,10 @@ export class Project extends SoftDeleteEntity {
   ownerMembershipId: string;
 
   @Column({ name: 'budget_cents', type: 'bigint', nullable: true })
-  budgetCents?: number;
+  budgetCents?: number | null;
+
+  @Column({ name: 'estimate_minutes', type: 'integer', nullable: true })
+  estimateMinutes?: number | null;
 
   @Column({ type: 'char', length: 3 })
   currency: string;

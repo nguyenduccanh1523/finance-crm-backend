@@ -26,6 +26,8 @@ import { BusinessDashboardController } from './dashboard/business-dashboard.cont
 import { BusinessDashboardService } from './dashboard/business-dashboard.service';
 import { CrmCustomersController } from './clients/crm-customers.controller';
 import { CrmCustomersService } from './clients/crm-customers.service';
+import { WorkManagementController } from './work-management/work-management.controller';
+import { WorkManagementService } from './work-management/work-management.service';
 import { OrganizationsModule } from '../core/organizations/organizations.module';
 
 @Module({
@@ -58,12 +60,14 @@ import { OrganizationsModule } from '../core/organizations/organizations.module'
   controllers: [
     BusinessDashboardController,
     CrmCustomersController,
+    WorkManagementController,
     BusinessController,
   ],
   providers: [
     BusinessCrudService,
     BusinessDashboardService,
     CrmCustomersService,
+    WorkManagementService,
   ],
   exports: [TypeOrmModule],
 })

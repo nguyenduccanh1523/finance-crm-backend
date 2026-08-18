@@ -12,7 +12,7 @@ export class Task extends SoftDeleteEntity {
   projectId: string;
 
   @Column() title: string;
-  @Column({ nullable: true }) description?: string;
+  @Column({ type: 'varchar', nullable: true }) description?: string | null;
 
   @Column({ name: 'status_id', type: 'uuid' })
   statusId: string;
@@ -24,14 +24,17 @@ export class Task extends SoftDeleteEntity {
   priority: number;
 
   @Column({ name: 'due_at', type: 'timestamptz', nullable: true })
-  dueAt?: Date;
+  dueAt?: Date | null;
 
   @Column({ name: 'estimate_minutes', type: 'integer', nullable: true })
-  estimateMinutes?: number;
+  estimateMinutes?: number | null;
 
   @Column({ name: 'actual_minutes', type: 'integer', default: 0 })
   actualMinutes: number;
 
   @Column({ name: 'created_by', type: 'uuid' })
   createdBy: string;
+
+  @Column({ name: 'assigned_by', type: 'uuid', nullable: true })
+  assignedBy?: string | null;
 }
